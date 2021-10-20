@@ -1,14 +1,13 @@
-package main.java.com.clickhouse_1c_tj;
+package main.java.com.clickhouse1ctj;
 
-import main.java.com.clickhouse_1c_tj.config.AppConfig;
-import main.java.com.clickhouse_1c_tj.config.ClickHouseConnect;
+import main.java.com.clickhouse1ctj.config.AppConfig;
+import main.java.com.clickhouse1ctj.config.ClickHouseConnect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.yandex.clickhouse.ClickHouseConnection;
 import ru.yandex.clickhouse.ClickHouseDataSource;
 import ru.yandex.clickhouse.ClickHouseStatement;
 import ru.yandex.clickhouse.settings.ClickHouseQueryParam;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -41,7 +40,7 @@ class ClickHouseDDL {
                 if (createDB) {
                     String sqlCreateDB = "CREATE DATABASE " + config.clickhouse.getDatabase();
                     stmt.executeQuery(sqlCreateDB);
-                    logger.info("Создана новый база данных {}", config.clickhouse.getDatabase());
+                    logger.info("Создана новая база данных {}", config.clickhouse.getDatabase());
                     return true;
                 } else
                     throw new SQLException("Нет указанной базы данных " + config.clickhouse.getDatabase());
@@ -64,23 +63,13 @@ class ClickHouseDDL {
         chAdditionalDBParams.put(ClickHouseQueryParam.DATABASE, chConfig.getDatabase());
     }
 
-    public synchronized LogRecord prepareTableSync(String tablename, Set<String> setFields, String filename, String parentName) throws SQLException {
-        LogRecord lastRecord;
-
-       if (tableExist(tablename)) {
+    public synchronized void prepareTableSync(String tablename, Set<String> setFields) throws SQLException {
+        if (tableExist(tablename))
             // Если таблица существует, то получим ее описание, обновим список колонок, при необходимости добавим отсутствующие
             updateExistingTableBeforeLoading(tablename, setFields);
-            // Получим последнюю запись в логе
-            lastRecord = getLastRecord(tablename, filename, parentName);
-            if (lastRecord == null)
-                logger.info("Ранее файл {}/{} не загружался", parentName, filename);
-            else
-                logger.info("Последняя загруженная запись: {}", lastRecord);
-        } else {
+        else
+            // Иначе создаем новую таблицу
             createTable(tablename, setFields);
-            lastRecord = null;
-        }
-        return lastRecord;
     }
 
     private boolean tableExist(String tablename) throws SQLException {
@@ -168,30 +157,6 @@ class ClickHouseDDL {
         execQuery(query);
     }
 
-    private LogRecord getLastRecord(String tablename, String filename, String parent) throws SQLException {
-        // Последняя запись определяется максимальный номером строки в файле, а не отметкой времени, так как
-        // встречаются логи ТЖ, где предыдущие записи могут быть старше (на микросекунды) относительно следующих строк
-        String query = "SELECT TOP 1 datetime, duration, event, level, line_number FROM "
-                + tablename
-                + " WHERE filename = "
-                + addSingleQuotes(filename)
-                + " AND parent = "
-                + addSingleQuotes(parent)
-                + " ORDER BY line_number DESC";
-        try (ClickHouseStatement stmt = getConnection().createStatement();
-             ResultSet rs = stmt.executeQuery(query, chAdditionalDBParams)) {
-            if (rs.next()) {
-                return new LogRecord(rs.getString(1),
-                        rs.getLong(2),
-                        rs.getString(3),
-                        rs.getString(4),
-                        rs.getInt(5));
-            } else {
-                return null;
-            }
-        }
-    }
-
     private void createTable(String tablename, Set<String> setFields) throws SQLException {
         StringBuilder query = new StringBuilder();
         query.append(String.format("CREATE TABLE IF NOT EXISTS %s (%n", tablename));
@@ -229,10 +194,6 @@ class ClickHouseDDL {
             connection = dataSource.getConnection(chConfig.getUser(), chConfig.getPass());
         }
         return connection;
-    }
-
-    private static String addSingleQuotes(String filename) {
-        return "'" + filename + "'";
     }
 
     public static SortedMap<String, String> getDefaultColumns() {

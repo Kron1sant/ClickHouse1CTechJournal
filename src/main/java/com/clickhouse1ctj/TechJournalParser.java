@@ -1,4 +1,4 @@
-package main.java.com.clickhouse_1c_tj;
+package main.java.com.clickhouse1ctj;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -20,7 +20,7 @@ public class TechJournalParser {
     BufferedReader logFile;
     Long size;
     int recordCount;
-    private final Pattern startLogPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d+-\\d+,");
+    private static final Pattern startLogPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d+-\\d+,");
     private String previousLine;
     private int currentLineNumber;
     private int previousLineNumber;
@@ -66,7 +66,8 @@ public class TechJournalParser {
         boolean skipRecords = lastRecord != null;
 
         List<LogRecord> batch = new ArrayList<>(); // Итоговый пакет записей лога
-        for (int i = 0; i < count; i++) {
+        int i = 0;
+        while (i < count) {
             StringBuilder sb = new StringBuilder();
             sb.append(previousLine);
             // Собираем одну запись лога поочередно читая строки файла,
@@ -77,17 +78,22 @@ public class TechJournalParser {
                 sb.append(currentLine);
                 currentLine = readNextLine();
             }
-            LogRecord logRecord = new LogRecord(sb.toString(), previousLineNumber, yearMonthDayHour);
-            if (!skipRecords) {
-                // Добавляем запись в пакет
-                batch.add(logRecord);
-                // Отдельно запоминаем все поля из лога - эта информация нужна для обновления колонок в таблице ClickHouse
-                logFields.addAll(logRecord.currentLogFields);
-                recordCount++;
-            } else if (logRecord.equals(lastRecord, false)) {
-                // Если текущая запись лога равна последней записи из базы, то снимаем метку slipRecords
-                // и на следующей итерации начинаем формировать пакет к загрузке
-                skipRecords = false;
+            try {
+                LogRecord logRecord = new LogRecord(sb.toString(), previousLineNumber, yearMonthDayHour);
+                if (!skipRecords) {
+                    // Добавляем запись в пакет
+                    batch.add(logRecord);
+                    // Отдельно запоминаем все поля из лога - эта информация нужна для обновления колонок в таблице ClickHouse
+                    logFields.addAll(logRecord.currentLogFields);
+                    recordCount++;
+                    i++;
+                } else if (logRecord.equals(lastRecord, false)) {
+                    // Если текущая запись лога равна последней записи из базы, то снимаем метку slipRecords
+                    // и на следующей итерации начинаем формировать пакет к загрузке
+                    skipRecords = false;
+                }
+            } catch (LogRecordParserException e) {
+                logger.info("Не удалось распарсить строку лога: {}. По причине {}", sb, e.getMessage());
             }
 
             if (currentLine == null) {
@@ -132,7 +138,7 @@ public class TechJournalParser {
             logger.error("Не удалось закрыть файл после парсинга {}", pathToLog.toAbsolutePath());
             e.printStackTrace();
         }
-        logger.info("Завершен парсинг. Обработано {} записей из файла {} ", recordCount, pathToLog.toAbsolutePath());
+        logger.info("Завершен парсинг. Всего обработано {} записей из файла {} ", recordCount, pathToLog.toAbsolutePath());
     }
 
     private int getPID(String parentName) {

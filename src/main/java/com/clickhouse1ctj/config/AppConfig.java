@@ -1,4 +1,4 @@
-package main.java.com.clickhouse_1c_tj.config;
+package main.java.com.clickhouse1ctj.config;
 
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;

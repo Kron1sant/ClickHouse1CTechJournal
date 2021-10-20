@@ -1,17 +1,16 @@
-package main.java.com.clickhouse_1c_tj;
+package main.java.com.clickhouse1ctj;
 
-import main.java.com.clickhouse_1c_tj.config.AppConfig;
-import main.java.com.clickhouse_1c_tj.config.ClickHouseConnect;
+import main.java.com.clickhouse1ctj.config.AppConfig;
+import main.java.com.clickhouse1ctj.config.ClickHouseConnect;
+
 import ru.yandex.clickhouse.*;
-
+import ru.yandex.clickhouse.settings.ClickHouseQueryParam;
 import java.io.FileNotFoundException;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.*;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import ru.yandex.clickhouse.settings.ClickHouseQueryParam;
 
 public class ClickHouseLoader implements Runnable {
     static final Logger logger = LoggerFactory.getLogger(ClickHouseLoader.class);
@@ -50,7 +49,6 @@ public class ClickHouseLoader implements Runnable {
     @Override
     public void run() {
         logger.info("Запущен поток #{}", Thread.currentThread().getName());
-        
         // Пока в пуле есть необработанные логи, выполняем их парсинг и загрузку
         while (!logsPool.isEmpty()) {
             Path logFile = logsPool.poll();
@@ -68,6 +66,8 @@ public class ClickHouseLoader implements Runnable {
                 e.printStackTrace();
             }
         }
+        logger.info("Поток #{} закончил работу, обработав из {} файлов {} строк",
+                Thread.currentThread().getName(), processedFiles, processedRecords);
     }
 
     public void load(TechJournalParser parser) throws SQLException {
@@ -77,9 +77,15 @@ public class ClickHouseLoader implements Runnable {
         }
         processedFiles++;
 
+        // Определим имя и подготовим таблицу в БД
         String tablename = getTablename(parser);
-        // Пополняемое множество итоговых имен колонок таблицы (пополняется перед загрузкой пакета)
-        LogRecord lastRecord = chDDLSync.prepareTableSync(tablename, setFields, parser.filename, parser.parentName);
+        chDDLSync.prepareTableSync(tablename, setFields);
+        // Получим последнюю запись в логе (от которой будет продолжена загрузка)
+        LogRecord lastRecord = getLastRecord(tablename, parser.filename, parser.parentName);
+        if (lastRecord == null)
+            logger.info("Ранее файл {}/{} не загружался", parser.parentName, parser.filename);
+        else
+            logger.info("Последняя загруженная запись: {}", lastRecord);
 
         while (!parser.isCompleted()) {
             // Получаем распарсенный лог порциями по batchSize
@@ -103,6 +109,30 @@ public class ClickHouseLoader implements Runnable {
             connection = dataSource.getConnection(chConfig.getUser(), chConfig.getPass());
         }
         return connection;
+    }
+
+    private LogRecord getLastRecord(String tablename, String filename, String parent) throws SQLException {
+        // Последняя запись определяется максимальный номером строки в файле, а не отметкой времени, так как
+        // встречаются логи ТЖ, где предыдущие записи могут быть старше (на микросекунды) относительно следующих строк
+        String query = "SELECT TOP 1 datetime, duration, event, level, line_number FROM "
+                + tablename
+                + " WHERE filename = "
+                + addSingleQuotes(filename)
+                + " AND parent = "
+                + addSingleQuotes(parent)
+                + " ORDER BY line_number DESC";
+        try (ClickHouseStatement stmt = getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(query, chAdditionalDBParams)) {
+            if (rs.next()) {
+                return new LogRecord(rs.getString(1),
+                        rs.getLong(2),
+                        rs.getString(3),
+                        rs.getString(4),
+                        rs.getInt(5));
+            } else {
+                return null;
+            }
+        }
     }
 
     private void insertBatchOfRecords(String tablename, List<LogRecord> batchToInsert, TechJournalParser parser) throws SQLException {
@@ -167,8 +197,15 @@ public class ClickHouseLoader implements Runnable {
                 }
                 stmt.addBatch();
             }
+            if (!chDDLSync.checkTableColumns(tablename, setFields)) {
+                logger.info("FAULT!!!");
+            }
             ((ClickHousePreparedStatementImpl) stmt).executeBatch(chAdditionalDBParams);
         }
+    }
+
+    private static String addSingleQuotes(String filename) {
+        return "'" + filename + "'";
     }
 }
 

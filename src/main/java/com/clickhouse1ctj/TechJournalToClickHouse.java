@@ -1,4 +1,4 @@
-package main.java.com.clickhouse_1c_tj;
+package main.java.com.clickhouse1ctj;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
 
-import main.java.com.clickhouse_1c_tj.config.AppConfig;
+import main.java.com.clickhouse1ctj.config.AppConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class TechJournalToClickHouse {
 
     public static void run (Path pathToLogs) throws InterruptedException, IOException {
         LocalDateTime startTime = LocalDateTime.now();
-        logger.info("Инициирована загрузка технологического журнала по адресу {}", pathToLogs.toAbsolutePath());
+        logger.info(" Инициирована загрузка технологического журнала по адресу {}", pathToLogs.toAbsolutePath());
 
         // Для хранения найденных фалов используем потокобезопасную очередь
         Queue<Path> logsPool = fillLogsPool(pathToLogs);
