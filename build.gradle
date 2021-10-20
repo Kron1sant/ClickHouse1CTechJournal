@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+compileJava.options.encoding = 'UTF-8'
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src']
+        }
+    }
+}
+dependencies {
+    implementation group: 'org.yaml', name: 'snakeyaml', version: '1.29'
+    implementation group: 'ru.yandex.clickhouse', name: 'clickhouse-jdbc', version: '+'
+    implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7+'
+}

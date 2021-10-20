@@ -1,0 +1,12 @@
+threadsCount: 6
+batchSize: 10000 # количество записей из файла в одной пакетной вставке (INSERT в таблицу)
+clickhouse:
+  host: localhost
+  port: 8123  # 8123 - http; 9000 - tcp
+  user: default
+  pass: ''
+  database: default
+  engine: MergeTree # Log - Log не может добавлять колонки динамически
+  tablePostfix: Main # будет добавлен к имени таблицы - лучше указывать имя кластера 1С
+  orderBy: datetime, event # первичный ключ
+  partition: toHour(datetime), source # секционирование таблиц логов по часам и типу источника

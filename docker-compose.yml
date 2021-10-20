@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  clickhouse:
+    image: yandex/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - ch-data:/var/lib/clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+  ui-client:
+    image: spoonest/clickhouse-tabix-web-client
+    ports:
+      - "8080:80"
+    environment:
+      CH_NAME: CH4OneC
+      CH_HOST: localhost:8123
+    depends_on:
+      - clickhouse
+volumes:
+  ch-data:
