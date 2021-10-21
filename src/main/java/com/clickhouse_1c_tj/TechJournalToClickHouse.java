@@ -47,7 +47,7 @@ public class TechJournalToClickHouse {
         AppConfig config = AppConfig.readConfig("config.yaml");
 
         // Выполним проверку подключения
-        if (!ClickHouseLoader.checkDB(config, true)) {
+        if (!ClickHouseDDL.checkDB(config, true)) {
             logger.error("Не удалось подключиться к базе данных Clickhouse");
             return;
         }
@@ -75,16 +75,12 @@ public class TechJournalToClickHouse {
         // Подсчет статистики
         int totalFiles = 0;
         int totalRecords = 0;
-        Set<String> setFields = new HashSet<>();
         for (ClickHouseLoader loader: loaders) {
             totalFiles+=loader.processedFiles;
             totalRecords+=loader.processedRecords;
-            setFields.addAll(loader.setFields);
         }
         Duration duration = Duration.between(startTime, LocalDateTime.now());
         logger.info("Загрузка завершена за {}. Всего из {} непустых файлов загружено {} записей", duration, totalFiles, totalRecords);
-
-        //ClickHouseLoader.addWatchLogMerge(config, setFields);
     }
 
     private static Queue<Path> fillLogsPool(Path pathToLogs) throws IOException {
