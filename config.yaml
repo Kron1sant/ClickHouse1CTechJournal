@@ -5,7 +5,7 @@ clickhouse:
   port: 8123  # 8123 - http; 9000 - tcp
   user: default
   pass: ''
-  database: TechJournal2
+  database: TechJournal
   engine: MergeTree # Log - Log не может добавлять колонки динамически
   tablePostfix: Main # будет добавлен к имени таблицы - лучше указывать имя кластера 1С
   orderBy: datetime, event # первичный ключ
