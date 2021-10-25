@@ -196,6 +196,12 @@ class ClickHouseDDL {
         return connection;
     }
 
+    private void closeConnection() throws SQLException {
+        // ToDo закрывать соединение для DDL в когда все лоадеры завершились
+        if (connection != null && !connection.isClosed())
+            connection.close();
+    }
+
     public static SortedMap<String, String> getDefaultColumns() {
         SortedMap<String, String> defaultColumns = new TreeMap<>();
         defaultColumns.put("filename", "String");

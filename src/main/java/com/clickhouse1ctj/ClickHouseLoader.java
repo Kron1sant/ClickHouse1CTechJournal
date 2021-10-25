@@ -66,6 +66,12 @@ public class ClickHouseLoader implements Runnable {
                 e.printStackTrace();
             }
         }
+        try {
+            closeConnection();
+        } catch (SQLException e) {
+            logger.error("Не удалось закрыть соединение после окончания загрузки: {}", e.toString());
+            e.printStackTrace();
+        }
         logger.info("Поток #{} закончил работу, обработав из {} файлов {} строк",
                 Thread.currentThread().getName(), processedFiles, processedRecords);
     }
@@ -109,6 +115,12 @@ public class ClickHouseLoader implements Runnable {
             connection = dataSource.getConnection(chConfig.getUser(), chConfig.getPass());
         }
         return connection;
+    }
+
+
+    private void closeConnection() throws SQLException {
+        if (connection != null && !connection.isClosed())
+            connection.close();
     }
 
     private LogRecord getLastRecord(String tablename, String filename, String parent) throws SQLException {
