@@ -1,7 +1,7 @@
-package main.java.com.clickhouse1ctj;
+package com.clickhouse1ctj;
 
-import main.java.com.clickhouse1ctj.config.AppConfig;
-import main.java.com.clickhouse1ctj.config.ClickHouseConnect;
+import com.clickhouse1ctj.config.AppConfig;
+import com.clickhouse1ctj.config.ClickHouseConnect;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.yandex.clickhouse.ClickHouseConnection;

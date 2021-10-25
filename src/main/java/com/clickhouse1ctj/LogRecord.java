@@ -1,4 +1,4 @@
-package main.java.com.clickhouse1ctj;
+package com.clickhouse1ctj;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

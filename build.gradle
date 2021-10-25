@@ -1,20 +1,18 @@
 plugins {
-    id 'java'
+    id 'application'
 }
 
+application {
+    mainClass = 'com.clickhouse1ctj.TechJournalToClickHouse'
+}
+
+version = '1.0.0'
 compileJava.options.encoding = 'UTF-8'
 
 repositories {
     mavenCentral()
 }
 
-sourceSets {
-    main {
-        java {
-            srcDirs = ['src']
-        }
-    }
-}
 dependencies {
     implementation group: 'org.yaml', name: 'snakeyaml', version: '1.29'
     implementation group: 'ru.yandex.clickhouse', name: 'clickhouse-jdbc', version: '+'

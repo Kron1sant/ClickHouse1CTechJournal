@@ -1,4 +1,4 @@
-package main.java.com.clickhouse1ctj.config;
+package com.clickhouse1ctj.config;
 
 public class ClickHouseConnect {
     private String host;

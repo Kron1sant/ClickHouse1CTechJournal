@@ -1,4 +1,4 @@
-package main.java.com.clickhouse1ctj;
+package com.clickhouse1ctj;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
 
-import main.java.com.clickhouse1ctj.config.AppConfig;
+import com.clickhouse1ctj.config.AppConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,7 +36,7 @@ public class TechJournalToClickHouse {
 
     public static void run (Path pathToLogs) throws InterruptedException, IOException {
         LocalDateTime startTime = LocalDateTime.now();
-        logger.info(" Инициирована загрузка технологического журнала по адресу {}", pathToLogs.toAbsolutePath());
+        logger.info("Инициирована загрузка технологического журнала по адресу {}", pathToLogs.toAbsolutePath());
 
         // Для хранения найденных фалов используем потокобезопасную очередь
         Queue<Path> logsPool = fillLogsPool(pathToLogs);
@@ -47,7 +47,7 @@ public class TechJournalToClickHouse {
         AppConfig config = AppConfig.readConfig("config.yaml");
 
         // Выполним проверку подключения
-        if (!ClickHouseDDL.checkDB(config, true)) {
+        if (!com.clickhouse1ctj.ClickHouseDDL.checkDB(config, true)) {
             logger.error("Не удалось подключиться к базе данных Clickhouse");
             return;
         }
@@ -56,9 +56,9 @@ public class TechJournalToClickHouse {
         int threadsCount = Integer.min(config.getThreadsCount(), logsPool.size());
         logger.info("Загрузка будет выполнена {} потоками", threadsCount);
         ExecutorService executor = Executors.newFixedThreadPool(threadsCount);
-        List<ClickHouseLoader> loaders = new ArrayList<>();
+        List<com.clickhouse1ctj.ClickHouseLoader> loaders = new ArrayList<>();
         for (int i = 0; i < threadsCount; i++) {
-            ClickHouseLoader loadThread = new ClickHouseLoader(config, logsPool);
+            com.clickhouse1ctj.ClickHouseLoader loadThread = new com.clickhouse1ctj.ClickHouseLoader(config, logsPool);
             executor.execute(loadThread);
             loaders.add(loadThread);
         }
@@ -75,7 +75,7 @@ public class TechJournalToClickHouse {
         // Подсчет статистики
         int totalFiles = 0;
         int totalRecords = 0;
-        for (ClickHouseLoader loader: loaders) {
+        for (com.clickhouse1ctj.ClickHouseLoader loader: loaders) {
             totalFiles+=loader.processedFiles;
             totalRecords+=loader.processedRecords;
         }
