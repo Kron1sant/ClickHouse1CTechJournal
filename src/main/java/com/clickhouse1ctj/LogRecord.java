@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-class LogRecord {
+public class LogRecord {
     String rawRecord;
     // Key fields:
     LocalDateTime timestamp;

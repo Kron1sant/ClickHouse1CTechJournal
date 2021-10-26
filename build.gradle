@@ -17,4 +17,5 @@ dependencies {
     implementation group: 'org.yaml', name: 'snakeyaml', version: '1.29'
     implementation group: 'ru.yandex.clickhouse', name: 'clickhouse-jdbc', version: '+'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7+'
+    implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
 }
