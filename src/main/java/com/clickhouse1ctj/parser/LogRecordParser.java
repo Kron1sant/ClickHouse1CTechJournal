@@ -1,4 +1,4 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.parser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -8,14 +8,14 @@ import java.util.regex.Pattern;
 
 class LogRecordParser {
     static final Logger logger = LoggerFactory.getLogger(LogRecordParser.class);
-    String rawRecord;
+    private final String rawRecord;
     private final int rowLength;
     private final Map<String, String> logDict = new HashMap<>();
     private int pos1 = 0;
     private int pos2 = 0;
     private static final char FIELD_SPLITTER = ',';
     private static final char KEY_VALUE_SPLITTER = '=';
-    private static final Pattern minSecMicrosecPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d{6}");
+    private static final Pattern mandatoryLogPartPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d{6}-\\d+,[a-zA-Z]+,\\d+,");
 
     LogRecordParser(String rawRecord) throws LogRecordParserException {
         this.rawRecord = rawRecord;
@@ -33,24 +33,24 @@ class LogRecordParser {
     }
 
     private void parseFixPart() throws LogRecordParserException {
+        // Проверка обязательной части в начале лога, например: 01:32.736453-23212,CALL,3,
+        if (!mandatoryLogPartPattern.matcher(rawRecord).find()) {
+            throw new LogRecordParserException(
+                    String.format("Начало записи лога не соответствует шаблону \"%s\"",
+                            mandatoryLogPartPattern));
+        }
         // 01:32.736430- - начало записи события
         pos1 = rawRecord.indexOf('-');
         String minSecMicrosec = rawRecord.substring(0, pos1);
         logDict.put("minSecMicrosec", minSecMicrosec);
-        if (!minSecMicrosecPattern.matcher(minSecMicrosec).find()) {
-            throw new LogRecordParserException(
-                    String.format("Начало записи лога не соответствует шаблону \"%s\": %s",
-                            minSecMicrosecPattern,
-                            rawRecord));
-        }
-        // ToDo предусмотреть выброс исключения, для "битой" записи, например, если не все ключевые значения присутствуют
+
         // -837213, - длительность события
         pos2 = rawRecord.indexOf(FIELD_SPLITTER);
         logDict.put("duration", rawRecord.substring(pos1 + 1, pos2));
         // ,CALL, - вид события
         pos1 = pos2;
         pos2 = rawRecord.indexOf(FIELD_SPLITTER, pos1 + 1);
-        logDict.put("event", rawRecord.substring(pos1 + 1, pos2));
+        logDict.put("event", rawRecord.substring(pos1 + 1, pos2).toUpperCase());
         // ,2, - уровень события
         pos1 = pos2;
         pos2 = rawRecord.indexOf(FIELD_SPLITTER, pos1 + 1);
@@ -93,10 +93,6 @@ class LogRecordParser {
             // Битая строка
             logger.info("Неожиданный конец строки лога {}", rawRecord);
             return null;
-        } else if (pos2 + 1 >= rawRecord.length()) {
-            // Строка заканчивается без значения ключа. Например, ",ConnectionString="
-            // ToDo - имеет смысл все таки возвращать key, а проверку на продолжение парсинга строки выполнять уровнем выше
-            return null;
         } else {
             String key = rawRecord.substring(pos1 + 1, pos2).replace(":", "");
             pos1 = pos2 + 1;
@@ -106,6 +102,13 @@ class LogRecordParser {
 
     private String getValueInParsingRow() {
         String value;
+        // Строка заканчивается пустым значением. Например, ",ConnectionString="
+        // В этом случае позиция текущего символа выходит за границу строки,
+        // проверим и, если это так, то вернем пустую строку
+        if (pos1 == rawRecord.length()) {
+            pos2 = pos1; // важно сдвинуть и pos2 за границы строки, чтобы на следующей итерации завершить циклы
+            return "";
+        }
         // Символ из текущей позиции строки
         char curCh = rawRecord.charAt(pos1);
         if (curCh == '\'' || curCh == '"') {

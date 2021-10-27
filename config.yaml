@@ -1,11 +1,14 @@
-threadsCount: 6
+threadCount: 6
 batchSize: 10000 # количество записей из файла в одной пакетной вставке (INSERT в таблицу)
+thresholdSizeHashByAttr: 10485760 # 10*1204*1024 байт - Порог размера файла, когда его контрольная сумма будет считаться по аттрибутам
+monitoringIntervalSec: 30 # Интервал поиска файлов для загрузки в режиме демона в секундах
+
 clickhouse:
   host: localhost
   port: 8123  # 8123 - http; 9000 - tcp
   user: default
   pass: ''
-  database: TechJournal2
+  database: TechJournal
   engine: MergeTree # Log - Log не может добавлять колонки динамически
   tablePostfix: Main # будет добавлен к имени таблицы - лучше указывать имя кластера 1С
   orderBy: datetime, event # первичный ключ

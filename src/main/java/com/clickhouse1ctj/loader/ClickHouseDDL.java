@@ -1,5 +1,6 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.loader;
 
+import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
 import org.slf4j.Logger;
@@ -12,64 +13,85 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
-class ClickHouseDDL {
-    static final Logger logger = LoggerFactory.getLogger(ClickHouseDDL.class);
-    private static ClickHouseDDL chDDLSync;
+/* Для всех операций по созданию таблиц, колонок и пр. DDL используется данный класс */
+public class ClickHouseDDL {
+    private static final Logger logger = LoggerFactory.getLogger(ClickHouseDDL.class);
+    private static final ClickHouseDDL chDDLSync = new ClickHouseDDL();
+    private static ClickHouseConnect chConfig;
 
-    private ClickHouseConnect chConfig;
     private final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseDataSource dataSource;
     private ClickHouseConnection connection;
 
-    public static ClickHouseDDL getClickHouseDDLSync() {
-        if (chDDLSync == null)
-            chDDLSync = new ClickHouseDDL();
-        return chDDLSync;
+    private ClickHouseDDL() {}
+
+    public static void init(AppConfig appConfig) {
+        // Используем синглтон для синхронных операций по изменению схемы базы данных
+        synchronized (chDDLSync) {
+            chConfig = appConfig.clickhouse;
+            String url = "jdbc:clickhouse://" + chConfig.getHost()
+                    + ":" + chConfig.getPort()
+                    + "/" + chConfig.getDatabase();
+            chDDLSync.dataSource = new ClickHouseDataSource(url);
+            chDDLSync.chAdditionalDBParams.put(ClickHouseQueryParam.DATABASE, chConfig.getDatabase());
+        }
     }
 
-    public static boolean checkDB(AppConfig config, boolean createDB) {
-        String url = "jdbc:clickhouse://" + config.clickhouse.getHost()
-                + ":" + config.clickhouse.getPort()
+    public static boolean checkDB(boolean createDB) {
+        String url = "jdbc:clickhouse://" + chConfig.getHost()
+                + ":" + chConfig.getPort()
                 + "/system";
-        String sql = "SHOW DATABASES LIKE '" + config.clickhouse.getDatabase() + "'";
+        String sql = "SHOW DATABASES LIKE '" + chConfig.getDatabase() + "'";
         ClickHouseDataSource tmpDataSource = new ClickHouseDataSource(url);
-        try (ClickHouseConnection conn = tmpDataSource.getConnection(config.clickhouse.getUser(), config.clickhouse.getPass());
+        try (ClickHouseConnection conn = tmpDataSource.getConnection(chConfig.getUser(), chConfig.getPass());
              ClickHouseStatement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             if (!rs.next()) {
                 if (createDB) {
-                    String sqlCreateDB = "CREATE DATABASE " + config.clickhouse.getDatabase();
+                    String sqlCreateDB = "CREATE DATABASE " + chConfig.getDatabase();
                     stmt.executeQuery(sqlCreateDB);
-                    logger.info("Создана новая база данных {}", config.clickhouse.getDatabase());
+                    logger.info("Создана новая база данных {}", chConfig.getDatabase());
                     return true;
                 } else
-                    throw new SQLException("Нет указанной базы данных " + config.clickhouse.getDatabase());
-            } else {
+                    throw new SQLException("Нет указанной базы данных " + chConfig.getDatabase());
+            } else
                 return true;
-            }
-        } catch (SQLException e) {
+       } catch (SQLException e) {
             logger.error("Не удалось выполнить запрос к базе ClickHouse {}", url);
             e.printStackTrace();
             return false;
+       }
+    }
+
+    public static void prepareTableSync(String tablename, Set<String> setFields) throws SQLException {
+        synchronized (chDDLSync) {
+            if (chDDLSync.tableExist(tablename))
+                // Если таблица существует, то получим ее описание, обновим список колонок, при необходимости добавим отсутствующие
+                chDDLSync.updateExistingTableBeforeLoading(tablename, setFields);
+            else
+                // Иначе создаем новую таблицу
+                chDDLSync.createTable(tablename, setFields);
         }
     }
 
-    public synchronized void setConfig(AppConfig config) {
-        chConfig = config.clickhouse;
-        String url = "jdbc:clickhouse://" + chConfig.getHost()
-                + ":" + chConfig.getPort()
-                + "/" + chConfig.getDatabase();
-        dataSource = new ClickHouseDataSource(url);
-        chAdditionalDBParams.put(ClickHouseQueryParam.DATABASE, chConfig.getDatabase());
+    public static void updateColumnsInTable(TechJournalParser parser, String tablename, Set<String> setExistFields) throws SQLException {
+        synchronized (chDDLSync) {
+            Set<String> setNewColumns = new HashSet<>(Set.copyOf(parser.logFields));
+            setNewColumns.removeAll(setExistFields); // Получим новые колонки
+            chDDLSync.addColumns(tablename, setNewColumns); // Добавим новые колонки
+            setExistFields.addAll(setNewColumns); // Сохраним новые колонки в коллекции
+        }
     }
 
-    public synchronized void prepareTableSync(String tablename, Set<String> setFields) throws SQLException {
-        if (tableExist(tablename))
-            // Если таблица существует, то получим ее описание, обновим список колонок, при необходимости добавим отсутствующие
-            updateExistingTableBeforeLoading(tablename, setFields);
-        else
-            // Иначе создаем новую таблицу
-            createTable(tablename, setFields);
+    public static void close() {
+        synchronized (chDDLSync) {
+            try {
+                chDDLSync.closeConnection();
+            } catch (SQLException e) {
+                logger.error("Не удалась закрыть соединение ClickHouseDDL: {}", e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 
     private boolean tableExist(String tablename) throws SQLException {
@@ -117,13 +139,6 @@ class ClickHouseDDL {
             }
         }
         return columns;
-    }
-
-    public synchronized void updateColumnsInTable(TechJournalParser parser, String tablename, Set<String> setFields) throws SQLException {
-        Set<String> setColumns = new HashSet<>(Set.copyOf(parser.logFields));
-        setColumns.removeAll(setFields); // Получим новые колонки
-        addColumns(tablename, setColumns); // Добавим новые колонки
-        setFields.addAll(setColumns); // Сохраним новые колонки в коллекции
     }
 
     private void addColumns(String tablename, SortedMap<String, String> newColumns) throws SQLException {
@@ -197,7 +212,6 @@ class ClickHouseDDL {
     }
 
     private void closeConnection() throws SQLException {
-        // ToDo закрывать соединение для DDL в когда все лоадеры завершились
         if (connection != null && !connection.isClosed())
             connection.close();
     }
@@ -217,6 +231,7 @@ class ClickHouseDDL {
     }
 
     public boolean checkTableColumns(String tablename, Set<String> setFields) throws SQLException {
+        // TEST.
         SortedMap<String, String> existingColumns = getTableDescription(tablename);
         Set<String> copyFields = new TreeSet<>(setFields);
         copyFields.removeAll(existingColumns.keySet());

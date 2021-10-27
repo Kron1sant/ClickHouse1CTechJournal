@@ -12,15 +12,16 @@ public class ClickHouseConnect {
     private String partition;
 
     ClickHouseConnect() {
+        // Настройки по умолчанию
         setHost("localhost");
-        setPort("8123");
+        setPort("8123"); // 8123 - http; 9000 - tcp
         setUser("default");
         setPass("");
         setDatabase("default");
-        setTablePostfix("Main");
-        setEngine("MergeTree");
-        setOrderBy("datetime, event");
-        setPartition("toHour(datetime), source");
+        setTablePostfix("Main"); // будет добавлен к имени таблицы - лучше указывать имя кластера 1С
+        setEngine("MergeTree"); // Используется более тяжелый MergeTree, т.к. Log не может добавлять колонки динамически
+        setOrderBy("datetime, event"); // первичный ключ
+        setPartition("toHour(datetime), source"); // секционирование таблиц логов по часам и типу источника
     }
 
     public String getHost() {
@@ -95,15 +96,4 @@ public class ClickHouseConnect {
         this.partition = partition;
     }
 
-    @Override
-    public String toString() {
-        return "ClickHouseConnect{" +
-                "host='" + host + '\'' +
-                ", port='" + port + '\'' +
-                ", user='" + user + '\'' +
-                ", pass='" + pass + '\'' +
-                ", database='" + database + '\'' +
-                ", engine='" + engine + '\'' +
-                '}';
-    }
 }

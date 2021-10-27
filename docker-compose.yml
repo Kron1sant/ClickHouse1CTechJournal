@@ -21,7 +21,27 @@ services:
       - "8080:80"
     environment:
       CH_NAME: CH4OneC
-      CH_HOST: localhost:8123
+      CH_HOST: clickhouse:8123
+    depends_on:
+      - clickhouse
+  ch-1ctj:
+    image: kron1sant/ch-1c-techjournal
+    environment:
+      THREADCOUNT: 6 # число потоков загрузки логов ТЖ
+      BATCHSIZE: 10000 # количество записей из файла в одной пакетной вставке (INSERT в таблицу)
+      THRESHOLD_SIZE_HASH_BY_ATTR: 10485760 # 10*1024*1024 = 10Мб - Порог размера файла, когда его контрольная сумма будет считаться по аттрибутам
+      MONITORING_INTERVAL_SEC: 30 # Интервал поиска файлов для загрузки в режиме демона в секундах
+      CH_HOST: clickhouse # имя хоста, где расположен ClickHouse
+      CH_PORT: 8123 # 8123 - http; 9000 - tcp
+      CH_USER: default
+      CH_PASS:
+      CH_DATABASE: TechJournalDocker
+      CH_ENGINE: MergeTree # Log - Log не может добавлять колонки динамически
+      CH_TABLEPOSTFIX: Main # будет добавлен к имени таблицы - лучше указывать имя кластера 1С
+      CH_ORDERBY: datetime, event # первичный ключ
+      CH_PARTITION: toHour(datetime), source # секционирование таблиц логов по часам и типу источника
+    volumes:
+      - /D/Logs/full:/var/lib/ClickHouse1CTechJournal/tj
     depends_on:
       - clickhouse
 volumes:

@@ -1,21 +1,21 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.parser;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class LogRecord {
-    String rawRecord;
+    private final String rawRecord;
     // Key fields:
-    LocalDateTime timestamp;
-    Long duration;
-    String event;
-    String level;
-    int lineNumberInFile;
+    public LocalDateTime timestamp;
+    public Long duration;
+    public String event;
+    public String level;
+    public int lineNumberInFile;
     // Other fields:
     private final Map<String, String> logDict = new HashMap<>();
 
-    Set<String> currentLogFields = new HashSet<>();
+    public final Set<String> currentLogFields = new HashSet<>();
 
     private static final DateTimeFormatter timeStampFormat = DateTimeFormatter.ofPattern("yyMMddHHmm:ss.SSSSSS");
     private static final DateTimeFormatter datetimeFormatCH = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
@@ -66,7 +66,6 @@ public class LogRecord {
     public String getDateTime64CH() {
         return datetimeFormatCH.format(this.timestamp);
     }
-
 
     @Override
     public String toString() {

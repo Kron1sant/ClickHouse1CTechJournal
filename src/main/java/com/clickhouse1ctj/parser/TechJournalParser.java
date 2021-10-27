@@ -1,4 +1,4 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.parser;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -10,22 +10,22 @@ import org.slf4j.LoggerFactory;
 public class TechJournalParser {
     static final Logger logger = LoggerFactory.getLogger(TechJournalParser.class);
 
-    Path pathToLog;
-    String filename;
-    String yearMonthDayHour;
-    String parentName;
-    String source;
-    int parentPid;
-    BufferedReader logFile;
-    Long size;
-    int recordCount;
+    public final Path pathToLog;
+    public final String filename;
+    public String yearMonthDayHour;
+    public String parentName;
+    public String source;
+    public int parentPid;
+    public BufferedReader logFile;
+    public Long size;
+    public int recordCount;
+
     private static final Pattern startLogPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d+-\\d+,");
     private String previousLine;
     private int currentLineNumber;
     private int previousLineNumber;
-    Set<String> logFields = new HashSet<>();
+    public final Set<String> logFields = new HashSet<>();
     private boolean completed = false;
-
 
     public TechJournalParser(Path pathToLog) throws FileNotFoundException {
         this.pathToLog = pathToLog;

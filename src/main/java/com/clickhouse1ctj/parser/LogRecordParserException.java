@@ -1,4 +1,4 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.parser;
 
 public class LogRecordParserException extends Exception {
     LogRecordParserException(String message) {super(message);}

@@ -1,5 +1,7 @@
-package com.clickhouse1ctj;
+package com.clickhouse1ctj.loader;
 
+import com.clickhouse1ctj.parser.LogRecord;
+import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
 
@@ -13,28 +15,23 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class ClickHouseLoader implements Runnable {
-    static final Logger logger = LoggerFactory.getLogger(ClickHouseLoader.class);
-    // Для всех операций по созданию таблиц, колонок и пр. DDL используется chDDLSync
-    static final ClickHouseDDL chDDLSync = ClickHouseDDL.getClickHouseDDLSync();
+    private static final Logger logger = LoggerFactory.getLogger(ClickHouseLoader.class);
 
     // Параметры подключения к Clickhouse
-    final ClickHouseConnect chConfig;
-
+    private final ClickHouseConnect chConfig;
     private final Queue<Path> logsPool;
     private final int batchSize;
     private final ClickHouseDataSource dataSource;
     private final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseConnection connection;
-
-    Set<String> setFields = new HashSet<>(); // колонки-поля таблицы лога ТЖ
-    int processedFiles; // счетчик обработанных файлов ТЖ
-    int processedRecords; // счетчик обработанных записей ТЖ
+    private final Set<String> setFields = new HashSet<>(); // колонки-поля таблицы лога ТЖ
+    private int processedFiles; // счетчик обработанных файлов ТЖ
+    private int processedRecords; // счетчик обработанных записей ТЖ
 
     public ClickHouseLoader(AppConfig config, Queue<Path> logsPathsPool) {
         chConfig = config.clickhouse;
         batchSize = config.getBatchSize();
         logsPool = logsPathsPool;
-        chDDLSync.setConfig(config);
 
         String url = "jdbc:clickhouse://" + chConfig.getHost()
                 + ":" + chConfig.getPort()
@@ -78,14 +75,14 @@ public class ClickHouseLoader implements Runnable {
 
     public void load(TechJournalParser parser) throws SQLException {
         if (parser.isEmpty()) {
-            logger.info("Файл пустой {}", parser.pathToLog.toAbsolutePath());
+            logger.info("Файл пустой {}. Загрузка не требуется", parser.pathToLog.toAbsolutePath());
             return;
         }
         processedFiles++;
 
         // Определим имя и подготовим таблицу в БД
         String tablename = getTablename(parser);
-        chDDLSync.prepareTableSync(tablename, setFields);
+        ClickHouseDDL.prepareTableSync(tablename, setFields);
         // Получим последнюю запись в логе (от которой будет продолжена загрузка)
         LogRecord lastRecord = getLastRecord(tablename, parser.filename, parser.parentName);
         if (lastRecord == null)
@@ -97,7 +94,7 @@ public class ClickHouseLoader implements Runnable {
             // Получаем распарсенный лог порциями по batchSize
             List<LogRecord> batchToInsert = parser.getNextRecords(batchSize, lastRecord);
             // Обновим набор колонок в таблице, если в логе появились новые поля
-            chDDLSync.updateColumnsInTable(parser, tablename, setFields);
+            ClickHouseDDL.updateColumnsInTable(parser, tablename, setFields);
             // Вставим пакет в таблицу
             insertBatchOfRecords(tablename, batchToInsert, parser);
             logger.info("Загружено {} записей из файла {}", batchToInsert.size(), parser.pathToLog.toAbsolutePath());
@@ -209,11 +206,17 @@ public class ClickHouseLoader implements Runnable {
                 }
                 stmt.addBatch();
             }
-            if (!chDDLSync.checkTableColumns(tablename, setFields)) {
-                logger.info("FAULT!!!");
-            }
+            // Выполним пакетную вставку значений в таблицу
             ((ClickHousePreparedStatementImpl) stmt).executeBatch(chAdditionalDBParams);
         }
+    }
+
+    public int getProcessedRecords() {
+        return processedRecords;
+    }
+
+    public int getProcessedFiles() {
+        return processedFiles;
     }
 
     private static String addSingleQuotes(String filename) {
