@@ -79,7 +79,7 @@ class LogRecordParser {
             if (currentValue == null)
                 logDict.put(key, value);
             else {
-                logger.debug("Дубль свойства {} в записи лога текущее значение: {}, дополнительное: {} ", key, currentValue, value);
+                logger.trace("Дубль свойства {} в записи лога текущее значение: {}, дополнительное: {} ", key, currentValue, value);
                 logDict.put(key, currentValue + "," + value);
             }
             pos1 = pos2;

@@ -5,17 +5,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class LogRecord {
-    private final String rawRecord;
     // Key fields:
-    public LocalDateTime timestamp;
-    public Long duration;
-    public String event;
-    public String level;
-    public int lineNumberInFile;
+    private final LocalDateTime timestamp;
+    private final Long duration;
+    private final String event;
+    private final String level;
+    private final int lineNumberInFile;
     // Other fields:
     private final Map<String, String> logDict = new HashMap<>();
-
-    public final Set<String> currentLogFields = new HashSet<>();
+    public final Set<String> currentLogFields = new HashSet<>(); // все поля текущей записи лога
 
     private static final DateTimeFormatter timeStampFormat = DateTimeFormatter.ofPattern("yyMMddHHmm:ss.SSSSSS");
     private static final DateTimeFormatter datetimeFormatCH = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
@@ -23,7 +21,6 @@ public class LogRecord {
     public LogRecord(String rawRecord, int lineNumber, String yearMonthDayHour) throws LogRecordParserException {
         LogRecordParser parser = new LogRecordParser(rawRecord);
         Map<String, String> fullParsedDict = parser.getDict();
-        this.rawRecord = rawRecord;
         this.lineNumberInFile = lineNumber;
         // Fixed fields
         this.timestamp = timeStampFormat.parse(yearMonthDayHour + fullParsedDict.get("minSecMicrosec"), LocalDateTime::from);
@@ -41,8 +38,7 @@ public class LogRecord {
     }
 
     public LogRecord(String timestampStr, Long duration, String event, String level, int lineNumber) {
-        this.rawRecord = "";
-        // Ключевые поля записи лога
+        // Ключевые поля записи лога:
         // Строка timestampStr должна иметь формат yyyy-MM-dd HH:mm:ss.SSSSSS
         this.timestamp = datetimeFormatCH.parse(timestampStr, LocalDateTime::from);
         this.duration = duration;
@@ -65,6 +61,22 @@ public class LogRecord {
 
     public String getDateTime64CH() {
         return datetimeFormatCH.format(this.timestamp);
+    }
+
+    public Long getDuration() {
+        return duration;
+    }
+
+    public String getEvent() {
+        return event;
+    }
+
+    public String getLevel() {
+        return level;
+    }
+
+    public int getLineNumberInFile() {
+        return lineNumberInFile;
     }
 
     @Override

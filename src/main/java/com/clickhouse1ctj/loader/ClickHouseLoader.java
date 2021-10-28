@@ -5,6 +5,7 @@ import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
 
+import com.clickhouse1ctj.parser.TechJournalParserException;
 import ru.yandex.clickhouse.*;
 import ru.yandex.clickhouse.settings.ClickHouseQueryParam;
 import java.io.FileNotFoundException;
@@ -24,7 +25,6 @@ public class ClickHouseLoader implements Runnable {
     private final ClickHouseDataSource dataSource;
     private final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseConnection connection;
-    private final Set<String> setFields = new HashSet<>(); // колонки-поля таблицы лога ТЖ
     private int processedFiles; // счетчик обработанных файлов ТЖ
     private int processedRecords; // счетчик обработанных записей ТЖ
 
@@ -53,20 +53,22 @@ public class ClickHouseLoader implements Runnable {
                 break; // Другой поток уже мог успеть взять последний файл в проработку
 
             try {
+                logger.debug("Старт загрузки файла {}", logFile.toAbsolutePath());
                 // Создаем парсер лога и выполняем загрузку
                 load(new TechJournalParser(logFile));
-            } catch (FileNotFoundException e) {
+                logger.debug("Завершена загрузка файла {}", logFile.toAbsolutePath());
+            } catch (FileNotFoundException | TechJournalParserException e) {
                 logger.error("Не удалось загрузить файл ТЖ {}", logFile.toAbsolutePath());
                 e.printStackTrace();
             } catch (SQLException e) {
-                logger.error("Не удалось выполнить запрос к базе Clickhouse: {}", e.toString());
+                logger.error("Не удалось выполнить запрос к базе Clickhouse при загрузке из файла {}", logFile.toAbsolutePath());
                 e.printStackTrace();
             }
         }
         try {
             closeConnection();
         } catch (SQLException e) {
-            logger.error("Не удалось закрыть соединение после окончания загрузки: {}", e.toString());
+            logger.error("Не удалось закрыть соединение после окончания загрузки");
             e.printStackTrace();
         }
         logger.info("Поток #{} закончил работу, обработав из {} файлов {} строк",
@@ -82,7 +84,8 @@ public class ClickHouseLoader implements Runnable {
 
         // Определим имя и подготовим таблицу в БД
         String tablename = getTablename(parser);
-        ClickHouseDDL.prepareTableSync(tablename, setFields);
+        logger.debug("Определена таблица {} для загрузки из файла {}", tablename, parser.pathToLog.toAbsolutePath());
+        ClickHouseDDL.prepareTableSync(tablename);
         // Получим последнюю запись в логе (от которой будет продолжена загрузка)
         LogRecord lastRecord = getLastRecord(tablename, parser.filename, parser.parentName);
         if (lastRecord == null)
@@ -94,7 +97,7 @@ public class ClickHouseLoader implements Runnable {
             // Получаем распарсенный лог порциями по batchSize
             List<LogRecord> batchToInsert = parser.getNextRecords(batchSize, lastRecord);
             // Обновим набор колонок в таблице, если в логе появились новые поля
-            ClickHouseDDL.updateColumnsInTable(parser, tablename, setFields);
+            ClickHouseDDL.updateColumnsInTable(tablename, parser.getParsedFields());
             // Вставим пакет в таблицу
             insertBatchOfRecords(tablename, batchToInsert, parser);
             logger.info("Загружено {} записей из файла {}", batchToInsert.size(), parser.pathToLog.toAbsolutePath());
@@ -147,6 +150,7 @@ public class ClickHouseLoader implements Runnable {
     private void insertBatchOfRecords(String tablename, List<LogRecord> batchToInsert, TechJournalParser parser) throws SQLException {
         StringJoiner joinerColumns = new StringJoiner(",");
         StringJoiner joinerParams = new StringJoiner(",");
+        SortedSet<String> setFields = parser.getParsedFields();
         for (String field: setFields) {
             joinerColumns.add(field);
             joinerParams.add("?");
@@ -187,16 +191,16 @@ public class ClickHouseLoader implements Runnable {
                             stmt.setString(i, rec.getDateTime64CH());
                             break;
                         case "line_number":
-                            stmt.setInt(i, rec.lineNumberInFile);
+                            stmt.setInt(i, rec.getLineNumberInFile());
                             break;
                         case "duration":
-                            stmt.setLong(i, rec.duration);
+                            stmt.setLong(i, rec.getDuration());
                             break;
                         case "event":
-                            stmt.setString(i, rec.event);
+                            stmt.setString(i, rec.getEvent());
                             break;
                         case "level":
-                            stmt.setString(i, rec.level);
+                            stmt.setString(i, rec.getLevel());
                             break;
                         default:
                             stmt.setString(i, rec.get(field));
@@ -207,7 +211,14 @@ public class ClickHouseLoader implements Runnable {
                 stmt.addBatch();
             }
             // Выполним пакетную вставку значений в таблицу
+            TableLock.getTableLock(tablename).down(); // Используется семафор, чтобы исключить параллельные операции DDL
             ((ClickHousePreparedStatementImpl) stmt).executeBatch(chAdditionalDBParams);
+            logger.debug("Выполнена вставка в таблицу {}. Количество добавляемых строк: {}", tablename, batchToInsert.size());
+        } catch (SQLException e) {
+            logger.error("Не удалось выполнить запрос: {}. Количество добавляемых строк: {}", insertQuery, batchToInsert.size());
+            throw new SQLException("Ошибка при пакетной вставка в таблицу", e);
+        } finally {
+            TableLock.getTableLock(tablename).up(); // Возврат семафора
         }
     }
 

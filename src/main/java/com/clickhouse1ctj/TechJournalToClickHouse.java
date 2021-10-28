@@ -63,7 +63,7 @@ public class TechJournalToClickHouse implements Runnable {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         if (daemonMode) {
             logger.info("Запущен демон поиска новых логов с интервалом {} секунд", appConfig.getMonitoringIntervalSec());
-            executor.scheduleAtFixedRate (new TechJournalToClickHouse(), 0, appConfig.getMonitoringIntervalSec(), TimeUnit.SECONDS);
+            executor.scheduleAtFixedRate(new TechJournalToClickHouse(), 0, appConfig.getMonitoringIntervalSec(), TimeUnit.SECONDS);
         } else {
             executor.execute(new TechJournalToClickHouse());
             executor.shutdown();
@@ -120,9 +120,11 @@ public class TechJournalToClickHouse implements Runnable {
         } catch (InterruptedException e) {
             logger.error("Ошибка при ожидании завершения потоков: {}", e.getMessage());
             e.printStackTrace();
+            Thread.currentThread().interrupt();
+        } finally {
+            // Закроем общее соединение для операций DDl
+            ClickHouseDDL.close();
         }
-        // Закроем общее соединение для операций DDl
-        ClickHouseDDL.close();
 
         // Подсчет статистики
         int totalFiles = 0;
@@ -177,6 +179,7 @@ public class TechJournalToClickHouse implements Runnable {
         if (!daemonMode) {
             // В обычном режиме не проверяем изменялись ли файлы, сразу добавим в пул
             logsPool.add(path);
+            logger.info("Файл {} добавлен в пул к обработке", path);
             return;
         }
 
@@ -233,7 +236,7 @@ public class TechJournalToClickHouse implements Runnable {
                 e.printStackTrace();
                 return new byte[0];
             } catch (BufferOverflowException | ReadOnlyBufferException e) {
-                logger.warn("Не удалось получить двоичный буфер по аттрибутам файла файла {}: {}", pathToLog, e.getMessage());
+                logger.warn("Не удалось получить двоичный буфер по атрибутам файла файла {}: {}", pathToLog, e.getMessage());
                 e.printStackTrace();
                 return new byte[0];
             }

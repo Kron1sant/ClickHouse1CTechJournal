@@ -22,7 +22,7 @@ public class AppConfig {
     private int threadCount;
     private int batchSize; // количество записей из файла в одной пакетной вставке (INSERT в таблицу)
     private String logExtension; // фильтр расширения для поиска логов
-    private int thresholdSizeHashByAttr; // Порог размера файла, когда его контрольная сумма будет считаться по аттрибутам
+    private int thresholdSizeHashByAttr; // Порог размера файла, когда его контрольная сумма будет считаться по атрибутам
     private int monitoringIntervalSec; // Интервал поиска файлов для загрузки в режиме демона в секундах
 
     AppConfig() {

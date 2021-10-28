@@ -1,6 +1,5 @@
 package com.clickhouse1ctj.loader;
 
-import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
 import org.slf4j.Logger;
@@ -22,6 +21,8 @@ public class ClickHouseDDL {
     private final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseDataSource dataSource;
     private ClickHouseConnection connection;
+    // Будем хранить кешированный набор колонок по каждой таблице
+    private final Map<String, SortedSet<String>> fieldsInTables = new HashMap<>();
 
     private ClickHouseDDL() {}
 
@@ -63,35 +64,55 @@ public class ClickHouseDDL {
        }
     }
 
-    public static void prepareTableSync(String tablename, Set<String> setFields) throws SQLException {
-        synchronized (chDDLSync) {
-            if (chDDLSync.tableExist(tablename))
+    public static void prepareTableSync(String tablename) throws SQLException {
+        synchronized (TableLock.getTableLock(tablename)) {
+            TableLock.getTableLock(tablename).check();
+            logger.debug("Подготовка таблицы {} для загрузки", tablename);
+            SortedSet<String> setExistFields = getFieldsInTable(tablename);
+            if (chDDLSync.tableExist(tablename)) {
+                logger.debug("Таблица {} существует", tablename);
                 // Если таблица существует, то получим ее описание, обновим список колонок, при необходимости добавим отсутствующие
-                chDDLSync.updateExistingTableBeforeLoading(tablename, setFields);
-            else
+                chDDLSync.updateExistingTableBeforeLoading(tablename, setExistFields);
+            } else {
+                logger.debug("Таблица {} не существует. Будет создана новая", tablename);
                 // Иначе создаем новую таблицу
-                chDDLSync.createTable(tablename, setFields);
+                chDDLSync.createTable(tablename, setExistFields);
+            }
         }
     }
 
-    public static void updateColumnsInTable(TechJournalParser parser, String tablename, Set<String> setExistFields) throws SQLException {
-        synchronized (chDDLSync) {
-            Set<String> setNewColumns = new HashSet<>(Set.copyOf(parser.logFields));
-            setNewColumns.removeAll(setExistFields); // Получим новые колонки
+    public static void updateColumnsInTable(String tablename, SortedSet<String> setParsedFields) throws SQLException {
+        synchronized (TableLock.getTableLock(tablename)) {
+            TableLock.getTableLock(tablename).check();
+            SortedSet<String> setExistFields = getFieldsInTable(tablename); // Закешированные поля таблицы
+            Set<String> setNewColumns = new HashSet<>(setParsedFields); // Поля полученные при парсинге лога (копируем, так как будем изменять)
+            logger.debug("Обновление колонок таблицы {} при загрузке очередного пакета. Состав известных колонок {}. " +
+                    "Состав колонок из пакета {}", tablename, setExistFields, setNewColumns);
+            setNewColumns.removeAll(setExistFields); // Поля, которые отсутствуют в таблице
             chDDLSync.addColumns(tablename, setNewColumns); // Добавим новые колонки
             setExistFields.addAll(setNewColumns); // Сохраним новые колонки в коллекции
         }
     }
 
     public static void close() {
-        synchronized (chDDLSync) {
-            try {
-                chDDLSync.closeConnection();
-            } catch (SQLException e) {
-                logger.error("Не удалась закрыть соединение ClickHouseDDL: {}", e.getMessage());
-                e.printStackTrace();
-            }
+        try {
+            chDDLSync.closeConnection();
+        } catch (SQLException e) {
+            logger.error("Не удалась закрыть соединение ClickHouseDDL: {}", e.getMessage());
+            e.printStackTrace();
         }
+    }
+
+    private static SortedSet<String> getFieldsInTable(String tablename) {
+        SortedSet<String> setFields = chDDLSync.fieldsInTables.get(tablename);
+        if (setFields == null) {
+            logger.debug("Для таблицы {} ранее не был закеширован набор полей", tablename);
+            setFields = new TreeSet<>();
+            chDDLSync.fieldsInTables.put(tablename, setFields);
+        } else {
+            logger.debug("Для таблицы {} получен закешированный набор полей {}", tablename, setFields);
+        }
+        return setFields;
     }
 
     private boolean tableExist(String tablename) throws SQLException {
@@ -109,9 +130,10 @@ public class ClickHouseDDL {
     private void updateExistingTableBeforeLoading(String tablename, Set<String> setFields) throws SQLException {
         // Получим уже существующие колонки в таблице
         SortedMap<String, String> existingColumns = getTableDescription(tablename);
-        // Если список полей в лоадере пустой, значит он только запустился, обновлять в таблице нечего,
-        // запомним существующие табличные поля
+        logger.debug("В таблице {} присутствуют следующие колонки {}", tablename, existingColumns);
+        // Проверим состав закешированных полей, если они пусты, то добавим в кэш существующие поля и выйдем из процедуры
         if (setFields.isEmpty()) {
+            logger.debug("Запрашиваемый набор колонок для добавления в таблицу {} пуст. Будет запомнен набор существующих в таблице колонок", tablename);
             setFields.addAll(existingColumns.keySet());
             return;
         }
@@ -119,6 +141,7 @@ public class ClickHouseDDL {
         Set<String> missingColumnsNames = new HashSet<>(setFields);
         // Вычтем из списка те колонки, которые уже существуют
         missingColumnsNames.removeAll(existingColumns.keySet());
+        logger.debug("Для добавления в таблицу {} определен следующий набор колонок {}", tablename, missingColumnsNames);
         // Соберем итоговый набор колонок для добавлений
         SortedMap<String, String> defaultColumns = getDefaultColumns();
         SortedMap<String, String> missingColumns = new TreeMap<>();
@@ -156,6 +179,7 @@ public class ClickHouseDDL {
 
     private void addColumns(String tablename, Set<String> newColumns) throws SQLException {
         if (newColumns.isEmpty()) {
+            logger.debug("В таблицу {} нет колонок для добавления", tablename);
             return;
         }
 
@@ -169,6 +193,7 @@ public class ClickHouseDDL {
 
     private void addColumn(String tablename, String newColumn, String columnProperties) throws SQLException {
         String query = String.format("ALTER TABLE %s ADD COLUMN IF NOT EXISTS %s %s", tablename, newColumn, columnProperties);
+        logger.debug("SQL-запрос на добавление колонки {}", query);
         execQuery(query);
     }
 
@@ -177,6 +202,7 @@ public class ClickHouseDDL {
         query.append(String.format("CREATE TABLE IF NOT EXISTS %s (%n", tablename));
         // Добавим все колонки по умолчанию
         SortedMap<String, String> defaultColumns = getDefaultColumns();
+        logger.debug("Для таблицы {} закеширован набор колонок: {}", tablename, setFields);
         setFields.addAll(defaultColumns.keySet());
         // Получим список отсутствующих колонок для таблицы
         SortedMap<String, String> missingColumns = new TreeMap<>();
@@ -194,6 +220,7 @@ public class ClickHouseDDL {
         query.append(String.format("PARTITION BY (%s)", chConfig.getPartition()));
         execQuery(query.toString());
         logger.info("Создана таблица {}", tablename);
+        logger.debug("SQL запрос на создание таблицы {}", query);
     }
 
     private void execQuery(String query) throws SQLException {
@@ -243,3 +270,4 @@ public class ClickHouseDDL {
         }
     }
 }
+

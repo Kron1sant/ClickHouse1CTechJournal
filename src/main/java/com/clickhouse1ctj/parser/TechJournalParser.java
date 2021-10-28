@@ -12,27 +12,27 @@ public class TechJournalParser {
 
     public final Path pathToLog;
     public final String filename;
-    public String yearMonthDayHour;
-    public String parentName;
-    public String source;
-    public int parentPid;
-    public BufferedReader logFile;
-    public Long size;
-    public int recordCount;
+    public final String yearMonthDayHour;
+    public final String parentName;
+    public final String source;
+    public final int parentPid;
+    public final BufferedReader logFile;
+    public final Long size;
+    private int recordCount;
 
     private static final Pattern startLogPattern = Pattern.compile("^\\d\\d:\\d\\d\\.\\d+-\\d+,");
     private String previousLine;
     private int currentLineNumber;
     private int previousLineNumber;
-    public final Set<String> logFields = new HashSet<>();
+    // Поля из очередной порции логов
+    private SortedSet<String> logFields;
     private boolean completed = false;
 
-    public TechJournalParser(Path pathToLog) throws FileNotFoundException {
+    public TechJournalParser(Path pathToLog) throws FileNotFoundException, TechJournalParserException {
         this.pathToLog = pathToLog;
         filename = pathToLog.getFileName().toString();
         if (filename.length() != 12 || !isDigit(filename.substring(0, 8))) {
-            logger.error("Некорректное имя файла {}. Должен быть формат YYMMDDHH.log", filename);
-            return;
+            throw new TechJournalParserException(String.format("Некорректное имя файла %s. Должен быть формат YYMMDDHH.log", filename));
         }
         yearMonthDayHour = filename.substring(0, 8);
         parentName = pathToLog.getParent().getFileName().toString();
@@ -55,6 +55,7 @@ public class TechJournalParser {
     }
 
     public List<LogRecord> getNextRecords(int count, LogRecord lastRecord) {
+        logFields = new TreeSet<>();
         if (previousLine == null) {
             // Только начали чтение, первая строка может начинаться с BOM-символов
             previousLine = eraseBOM(readNextLine());
@@ -106,6 +107,10 @@ public class TechJournalParser {
             previousLineNumber = currentLineNumber;
         }
         return batch;
+    }
+
+    public SortedSet<String> getParsedFields() {
+        return logFields;
     }
 
     private String readNextLine() {
