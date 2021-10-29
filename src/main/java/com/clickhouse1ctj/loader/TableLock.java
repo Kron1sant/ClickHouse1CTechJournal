@@ -9,11 +9,10 @@ import java.util.Map;
 class TableLock {
     private static final Logger logger = LoggerFactory.getLogger(TableLock.class);
     private static final Map<String, TableLock> tableLocks = new HashMap<>();
-    private final String tablename;
     private int semaphore;
 
     public TableLock(String tablename) {
-        this.tablename = tablename;
+        logger.trace("Создан объект блокировки для таблицы {}", tablename);
     }
 
     public static synchronized TableLock getTableLock(String tablename) {
@@ -25,6 +24,7 @@ class TableLock {
         while (semaphore != 0) {
             logger.trace("Повторная попытка проверки семафора. Текущее значение {}", semaphore);
             try {
+                //noinspection BusyWait
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -46,9 +46,5 @@ class TableLock {
         // Возврат из критической области без монитора. Сможем всегда вернуться, даже если объект удерживается
         semaphore--;
         logger.debug("Возврат семафора. Текущее значение {}", semaphore);
-    }
-
-    public String getTablename() {
-        return tablename;
     }
 }

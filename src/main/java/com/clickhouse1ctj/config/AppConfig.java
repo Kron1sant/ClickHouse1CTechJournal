@@ -19,6 +19,8 @@ public class AppConfig {
     private static final String DEFAULT_PATH_TO_CONFIG = "config.yaml";
 
     public final ClickHouseConnect clickhouse;
+
+    private boolean daemonMode;
     private int threadCount;
     private int batchSize; // количество записей из файла в одной пакетной вставке (INSERT в таблицу)
     private String logExtension; // фильтр расширения для поиска логов
@@ -28,8 +30,9 @@ public class AppConfig {
     AppConfig() {
         // Задает настройки по умолчанию
         clickhouse = new ClickHouseConnect();
-        setThreadCount(1);
-        setBatchSize(1000);
+        setDaemonMode(false);
+        setThreadCount(2);
+        setBatchSize(10000);
         setLogExtension(".log");
         setThresholdSizeHashByAttr(10*1024*1024);
         setMonitoringIntervalSec(30);
@@ -92,12 +95,22 @@ public class AppConfig {
             method = invokingObj.getClass().getMethod(setMethodName, parameterType);
             if (parameterType == int.class)
                 method.invoke(invokingObj, Integer.parseInt(value));
+            else if (parameterType == boolean.class)
+                method.invoke(invokingObj, value.equalsIgnoreCase("true") || value.equals("1"));
             else
                 method.invoke(invokingObj, value);
         } catch (SecurityException | IllegalAccessException | NoSuchMethodException | IllegalArgumentException | InvocationTargetException e) {
             logger.debug("Не удалось установить значение параметра конфигурации из переменных окружения: {} {}." +
                     "По причине: {}", setMethodName, value, e.getMessage());
         }
+    }
+
+    public boolean isDaemonMode() {
+        return daemonMode;
+    }
+
+    public void setDaemonMode(boolean daemonMode) {
+        this.daemonMode = daemonMode;
     }
 
     public int getBatchSize() {

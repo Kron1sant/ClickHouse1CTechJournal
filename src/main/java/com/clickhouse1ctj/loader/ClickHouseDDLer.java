@@ -2,6 +2,7 @@ package com.clickhouse1ctj.loader;
 
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import ru.yandex.clickhouse.ClickHouseConnection;
@@ -13,18 +14,18 @@ import java.sql.SQLException;
 import java.util.*;
 
 /* Для всех операций по созданию таблиц, колонок и пр. DDL используется данный класс */
-public class ClickHouseDDL {
-    private static final Logger logger = LoggerFactory.getLogger(ClickHouseDDL.class);
-    private static final ClickHouseDDL chDDLSync = new ClickHouseDDL();
+public class ClickHouseDDLer {
+    private static final Logger logger = LoggerFactory.getLogger(ClickHouseDDLer.class);
+    protected static final ClickHouseDDLer chDDLSync = new ClickHouseDDLer();
     private static ClickHouseConnect chConfig;
 
-    private final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
+    protected final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseDataSource dataSource;
     private ClickHouseConnection connection;
     // Будем хранить кешированный набор колонок по каждой таблице
     private final Map<String, SortedSet<String>> fieldsInTables = new HashMap<>();
 
-    private ClickHouseDDL() {}
+    private ClickHouseDDLer() {}
 
     public static void init(AppConfig appConfig) {
         // Используем синглтон для синхронных операций по изменению схемы базы данных
@@ -81,7 +82,7 @@ public class ClickHouseDDL {
         }
     }
 
-    public static void updateColumnsInTable(String tablename, SortedSet<String> setParsedFields) throws SQLException {
+    public static void updateColumnsInTableSync(String tablename, SortedSet<String> setParsedFields) throws SQLException {
         synchronized (TableLock.getTableLock(tablename)) {
             TableLock.getTableLock(tablename).check();
             SortedSet<String> setExistFields = getFieldsInTable(tablename); // Закешированные поля таблицы
@@ -115,7 +116,7 @@ public class ClickHouseDDL {
         return setFields;
     }
 
-    private boolean tableExist(String tablename) throws SQLException {
+    protected boolean tableExist(String tablename) throws SQLException {
         String query = String.format("EXISTS TABLE %s", tablename);
         try (ClickHouseStatement stmt = getConnection().createStatement();
              ResultSet rs = stmt.executeQuery(query, chAdditionalDBParams)) {
@@ -223,7 +224,7 @@ public class ClickHouseDDL {
         logger.debug("SQL запрос на создание таблицы {}", query);
     }
 
-    private void execQuery(String query) throws SQLException {
+    protected void execQuery(String query) throws SQLException {
         try (ClickHouseStatement stmt = getConnection().createStatement()) {
             stmt.executeQuery(query, chAdditionalDBParams);
         } catch (SQLException e) {
@@ -231,7 +232,7 @@ public class ClickHouseDDL {
         }
     }
 
-    private ClickHouseConnection getConnection() throws SQLException {
+    protected ClickHouseConnection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             connection = dataSource.getConnection(chConfig.getUser(), chConfig.getPass());
         }

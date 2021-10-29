@@ -2,15 +2,15 @@ package com.clickhouse1ctj.parser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 class LogRecordParser {
     static final Logger logger = LoggerFactory.getLogger(LogRecordParser.class);
     private final String rawRecord;
     private final int rowLength;
-    private final Map<String, String> logDict = new HashMap<>();
+    private final SortedMap<String, String> logDict = new TreeMap<>();
     private int pos1 = 0;
     private int pos2 = 0;
     private static final char FIELD_SPLITTER = ',';
@@ -23,7 +23,7 @@ class LogRecordParser {
         parseRecord();
     }
 
-    public Map<String, String> getDict() {
+    public SortedMap<String, String> getDict() {
         return logDict;
     }
 

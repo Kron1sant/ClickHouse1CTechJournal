@@ -2,6 +2,7 @@ package com.clickhouse1ctj.config;
 
 public enum ConfigKeys {
     PATH_TO_CONFIG,
+    DAEMON_MODE("setDaemonMode", boolean.class),
     LOG_FILE_EXTENSION("setLogExtension", String.class),
     THREADCOUNT("setThreadCount", int.class),
     BATCHSIZE("setBatchSize", int.class),

@@ -4,8 +4,8 @@ import com.clickhouse1ctj.parser.LogRecord;
 import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
 import com.clickhouse1ctj.config.ClickHouseConnect;
-
 import com.clickhouse1ctj.parser.TechJournalParserException;
+
 import ru.yandex.clickhouse.*;
 import ru.yandex.clickhouse.settings.ClickHouseQueryParam;
 import java.io.FileNotFoundException;
@@ -15,8 +15,8 @@ import java.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ClickHouseLoader implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(ClickHouseLoader.class);
+public class ClickHouseInserter implements Runnable {
+    private static final Logger logger = LoggerFactory.getLogger(ClickHouseInserter.class);
 
     // Параметры подключения к Clickhouse
     private final ClickHouseConnect chConfig;
@@ -28,7 +28,7 @@ public class ClickHouseLoader implements Runnable {
     private int processedFiles; // счетчик обработанных файлов ТЖ
     private int processedRecords; // счетчик обработанных записей ТЖ
 
-    public ClickHouseLoader(AppConfig config, Queue<Path> logsPathsPool) {
+    public ClickHouseInserter(AppConfig config, Queue<Path> logsPathsPool) {
         chConfig = config.clickhouse;
         batchSize = config.getBatchSize();
         logsPool = logsPathsPool;
@@ -77,7 +77,7 @@ public class ClickHouseLoader implements Runnable {
 
     public void load(TechJournalParser parser) throws SQLException {
         if (parser.isEmpty()) {
-            logger.info("Файл пустой {}. Загрузка не требуется", parser.pathToLog.toAbsolutePath());
+            logger.info("Файл пустой {}. Его загрузка не требуется", parser.pathToLog.toAbsolutePath());
             return;
         }
         processedFiles++;
@@ -85,7 +85,7 @@ public class ClickHouseLoader implements Runnable {
         // Определим имя и подготовим таблицу в БД
         String tablename = getTablename(parser);
         logger.debug("Определена таблица {} для загрузки из файла {}", tablename, parser.pathToLog.toAbsolutePath());
-        ClickHouseDDL.prepareTableSync(tablename);
+        ClickHouseDDLer.prepareTableSync(tablename);
         // Получим последнюю запись в логе (от которой будет продолжена загрузка)
         LogRecord lastRecord = getLastRecord(tablename, parser.filename, parser.parentName);
         if (lastRecord == null)
@@ -96,13 +96,13 @@ public class ClickHouseLoader implements Runnable {
         while (!parser.isCompleted()) {
             // Получаем распарсенный лог порциями по batchSize
             List<LogRecord> batchToInsert = parser.getNextRecords(batchSize, lastRecord);
-            // Обновим набор колонок в таблице, если в логе появились новые поля
-            ClickHouseDDL.updateColumnsInTable(tablename, parser.getParsedFields());
             // Вставим пакет в таблицу
             insertBatchOfRecords(tablename, batchToInsert, parser);
-            logger.info("Загружено {} записей из файла {}", batchToInsert.size(), parser.pathToLog.toAbsolutePath());
             processedRecords += batchToInsert.size();
         }
+
+        // Сохраним информацию по связи полей (свойств) и типов событий
+        PropertiesByEvents.save();
     }
 
     private String getTablename(TechJournalParser parser) {
@@ -148,67 +148,29 @@ public class ClickHouseLoader implements Runnable {
     }
 
     private void insertBatchOfRecords(String tablename, List<LogRecord> batchToInsert, TechJournalParser parser) throws SQLException {
+        if (batchToInsert.isEmpty()) {
+            logger.info("Нет записей в файле {} для вставки в таблицу {}", parser.pathToLog.toAbsolutePath(), tablename);
+            return;
+        }
+
+        // Обновим набор колонок в таблице, если в логе появились новые поля
+        ClickHouseDDLer.updateColumnsInTableSync(tablename, parser.getParsedFields());
+
+        // Соберем SQL текст запроса на вставку записей
         StringJoiner joinerColumns = new StringJoiner(",");
         StringJoiner joinerParams = new StringJoiner(",");
-        SortedSet<String> setFields = parser.getParsedFields();
-        for (String field: setFields) {
+        SortedSet<String> setRecordFields = new TreeSet<>(ClickHouseDDLer.getDefaultColumns().keySet());
+        setRecordFields.addAll(parser.getParsedFields());
+        for (String field: setRecordFields) {
             joinerColumns.add(field);
             joinerParams.add("?");
         }
-        String insertQuery = "INSERT INTO "
-                + tablename
-                + " ("
-                + joinerColumns
-                + ") VALUES ("
-                + joinerParams
-                + ")";
+        String insertQuery = "INSERT INTO " + tablename + " (" + joinerColumns + ") VALUES (" + joinerParams + ")";
 
+        // Заполним пакетный запрос и выполним вставку
         try (PreparedStatement stmt = getConnection().prepareStatement(insertQuery)) {
             for (LogRecord rec: batchToInsert) {
-                int i = 1;
-                for (String field: setFields) {
-                    switch (field) {
-                        case "filename":
-                            stmt.setString(i, parser.filename);
-                            break;
-                        case "parent":
-                            stmt.setString(i, parser.parentName);
-                            break;
-                        case "source_pid":
-                            stmt.setInt(i, parser.parentPid);
-                            break;
-                        case "source":
-                            stmt.setString(i, parser.source);
-                            break;
-                        case "datetime":
-                            // There is a mistake in ClickHouse-JDBC driver in class ClickHouseValueFormatter:
-                            // nano-part concatenates to a parameter value without leading zeros.
-                            // This code:
-                            // if (time != null && time.getNanos() % 1000000 > 0) {
-                            //        formatted.append('.').append(time.getNanos()); ←---- !!!
-                            //     }
-                            // stmt.setTimestamp(i, Timestamp.valueOf(rec.timestamp));
-                            stmt.setString(i, rec.getDateTime64CH());
-                            break;
-                        case "line_number":
-                            stmt.setInt(i, rec.getLineNumberInFile());
-                            break;
-                        case "duration":
-                            stmt.setLong(i, rec.getDuration());
-                            break;
-                        case "event":
-                            stmt.setString(i, rec.getEvent());
-                            break;
-                        case "level":
-                            stmt.setString(i, rec.getLevel());
-                            break;
-                        default:
-                            stmt.setString(i, rec.get(field));
-                            break;
-                    }
-                    i++;
-                }
-                stmt.addBatch();
+                addRecordToBatch(parser, setRecordFields, stmt, rec);
             }
             // Выполним пакетную вставку значений в таблицу
             TableLock.getTableLock(tablename).down(); // Используется семафор, чтобы исключить параллельные операции DDL
@@ -220,6 +182,54 @@ public class ClickHouseLoader implements Runnable {
         } finally {
             TableLock.getTableLock(tablename).up(); // Возврат семафора
         }
+        logger.info("Загружено {} записей из файла {}", batchToInsert.size(), parser.pathToLog.toAbsolutePath());
+    }
+
+    private void addRecordToBatch(TechJournalParser parser, SortedSet<String> setFields, PreparedStatement stmt, LogRecord rec) throws SQLException {
+        int i = 1;
+        for (String field: setFields) {
+            switch (field) {
+                case "filename":
+                    stmt.setString(i, parser.filename);
+                    break;
+                case "parent":
+                    stmt.setString(i, parser.parentName);
+                    break;
+                case "source_pid":
+                    stmt.setInt(i, parser.parentPid);
+                    break;
+                case "source":
+                    stmt.setString(i, parser.source);
+                    break;
+                case "datetime":
+                    // There is a mistake in ClickHouse-JDBC driver in class ClickHouseValueFormatter:
+                    // nano-part concatenates to a parameter value without leading zeros.
+                    // This code:
+                    // if (time != null && time.getNanos() % 1000000 > 0) {
+                    //        formatted.append('.').append(time.getNanos()); ←---- !!!
+                    //     }
+                    // stmt.setTimestamp(i, Timestamp.valueOf(rec.timestamp));
+                    stmt.setString(i, rec.getDateTime64CH());
+                    break;
+                case "line_number":
+                    stmt.setInt(i, rec.getLineNumberInFile());
+                    break;
+                case "duration":
+                    stmt.setLong(i, rec.getDuration());
+                    break;
+                case "event":
+                    stmt.setString(i, rec.getEvent());
+                    break;
+                case "level":
+                    stmt.setString(i, rec.getLevel());
+                    break;
+                default:
+                    stmt.setString(i, rec.get(field));
+                    break;
+            }
+            i++;
+        }
+        stmt.addBatch();
     }
 
     public int getProcessedRecords() {

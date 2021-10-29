@@ -1,11 +1,14 @@
 package com.clickhouse1ctj.parser;
 
+import com.clickhouse1ctj.loader.PropertiesByEvents;
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public class LogRecord {
     // Key fields:
+    private static final List<String> KEY_FIELDS = List.of("timestamp", "duration", "event", "level", "lineNumberInFile");
     private final LocalDateTime timestamp;
     private final Long duration;
     private final String event;
@@ -13,14 +16,14 @@ public class LogRecord {
     private final int lineNumberInFile;
     // Other fields:
     private final Map<String, String> logDict = new HashMap<>();
-    public final Set<String> currentLogFields = new HashSet<>(); // все поля текущей записи лога
+    public final Set<String> currentLogFields = new HashSet<>(KEY_FIELDS); // все поля текущей записи лога
 
     private static final DateTimeFormatter timeStampFormat = DateTimeFormatter.ofPattern("yyMMddHHmm:ss.SSSSSS");
     private static final DateTimeFormatter datetimeFormatCH = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSSSS");
 
     public LogRecord(String rawRecord, int lineNumber, String yearMonthDayHour) throws LogRecordParserException {
         LogRecordParser parser = new LogRecordParser(rawRecord);
-        Map<String, String> fullParsedDict = parser.getDict();
+        SortedMap<String, String> fullParsedDict = parser.getDict();
         this.lineNumberInFile = lineNumber;
         // Fixed fields
         this.timestamp = timeStampFormat.parse(yearMonthDayHour + fullParsedDict.get("minSecMicrosec"), LocalDateTime::from);
@@ -34,7 +37,8 @@ public class LogRecord {
                 continue;
             this.logDict.put(key, entry.getValue());
         }
-        this.currentLogFields.addAll(fullParsedDict.keySet());
+        this.currentLogFields.addAll(this.logDict.keySet()); // Запомним поля текущего лога
+        PropertiesByEvents.setPropertiesByEvent(this.event, this.logDict.keySet()); // Отдельно сохраним соответствие: событие -> необязательные свойства
     }
 
     public LogRecord(String timestampStr, Long duration, String event, String level, int lineNumber) {

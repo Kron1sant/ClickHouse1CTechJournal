@@ -1,6 +1,8 @@
 package com.clickhouse1ctj;
 
 import com.clickhouse1ctj.config.AppConfig;
+import com.clickhouse1ctj.loader.ClickHouseDDLer;
+import com.clickhouse1ctj.loader.ClickHouseInserter;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -17,9 +19,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Stream;
-
-import com.clickhouse1ctj.loader.ClickHouseDDL;
-import com.clickhouse1ctj.loader.ClickHouseLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.commons.cli.*;
@@ -32,8 +31,6 @@ public class TechJournalToClickHouse implements Runnable {
     static Path[] pathsToLogs;
     // Для хранения найденных фалов используем потокобезопасную очередь
     static final Queue<Path> logsPool = new ConcurrentLinkedQueue<>();
-    // Режим демона. По умолчанию, выключен
-    static boolean daemonMode = false;
     // В режиме демона будем запоминать просмотренный файлы и их контрольные суммы
     static final Map<Path, byte[]> observedFiles = new HashMap<>();
 
@@ -48,12 +45,14 @@ public class TechJournalToClickHouse implements Runnable {
             showHelp(options);
             return;
         }
-        if (cmd.hasOption("d")) {
-            // Включаем режим демона
-            daemonMode = true;
-        }
+
         // Читаем настройки
         appConfig = AppConfig.getConfig();
+        if (cmd.hasOption("d")) {
+            // Устанавливаем признак службы (демона), только если явно передан ключ,
+            // иначе используется настройка полученная при формировании конфига
+            appConfig.setDaemonMode(true);
+        }
 
         // Массив путей, в котором будем искать логи
         pathsToLogs = getPaths(cmd.getArgs());
@@ -61,7 +60,7 @@ public class TechJournalToClickHouse implements Runnable {
         // В зависимости от режима работы (демон/ не демон) будет
         // запущен исполнитель с интервалом в monitoringIntervalSec или разовый вызов
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        if (daemonMode) {
+        if (appConfig.isDaemonMode()) {
             logger.info("Запущен демон поиска новых логов с интервалом {} секунд", appConfig.getMonitoringIntervalSec());
             executor.scheduleAtFixedRate(new TechJournalToClickHouse(), 0, appConfig.getMonitoringIntervalSec(), TimeUnit.SECONDS);
         } else {
@@ -75,8 +74,8 @@ public class TechJournalToClickHouse implements Runnable {
         LocalDateTime startTime = LocalDateTime.now();
 
         // Выполним проверку подключения
-        ClickHouseDDL.init(appConfig);
-        if (!ClickHouseDDL.checkDB(true)) {
+        ClickHouseDDLer.init(appConfig);
+        if (!ClickHouseDDLer.checkDB(true)) {
             logger.error("Не удалось подключиться к базе данных Clickhouse. Проверьте параметры подключения " +
                     "(управлять ими можно через переменные окружения). Текущие значения:" +
                     "CH_HOST={}; CH_PORT={}; CH_USER={}; CH_PASS=[forbidden]",
@@ -106,9 +105,9 @@ public class TechJournalToClickHouse implements Runnable {
         int threadsCount = Integer.min(appConfig.getThreadCount(), logsPool.size());
         logger.info("Загрузка будет выполнена {} потоками", threadsCount);
         ExecutorService executor = Executors.newFixedThreadPool(threadsCount);
-        List<ClickHouseLoader> loaders = new ArrayList<>();
+        List<ClickHouseInserter> loaders = new ArrayList<>();
         for (int i = 0; i < threadsCount; i++) {
-            ClickHouseLoader loadThread = new ClickHouseLoader(appConfig, logsPool);
+            ClickHouseInserter loadThread = new ClickHouseInserter(appConfig, logsPool);
             executor.execute(loadThread);
             loaders.add(loadThread);
         }
@@ -123,13 +122,13 @@ public class TechJournalToClickHouse implements Runnable {
             Thread.currentThread().interrupt();
         } finally {
             // Закроем общее соединение для операций DDl
-            ClickHouseDDL.close();
+            ClickHouseDDLer.close();
         }
 
         // Подсчет статистики
         int totalFiles = 0;
         int totalRecords = 0;
-        for (ClickHouseLoader loader: loaders) {
+        for (ClickHouseInserter loader: loaders) {
             totalFiles += loader.getProcessedFiles();
             totalRecords += loader.getProcessedRecords();
         }
@@ -176,7 +175,7 @@ public class TechJournalToClickHouse implements Runnable {
     }
 
     private static void addFileToLogsPool(Path path) {
-        if (!daemonMode) {
+        if (!appConfig.isDaemonMode()) {
             // В обычном режиме не проверяем изменялись ли файлы, сразу добавим в пул
             logsPool.add(path);
             logger.info("Файл {} добавлен в пул к обработке", path);
@@ -252,5 +251,4 @@ public class TechJournalToClickHouse implements Runnable {
                 options,
                 "For example (start as service), ClickHouse1CTechJournal -d D:\\LOGS\\Full");
     }
-
 }

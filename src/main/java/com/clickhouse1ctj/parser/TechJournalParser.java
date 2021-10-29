@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,7 +94,7 @@ public class TechJournalParser {
                     skipRecords = false;
                 }
             } catch (LogRecordParserException e) {
-                logger.info("Не удалось распарсить строку лога: {}. По причине {}", sb, e.getMessage());
+                logger.warn("Не удалось распарсить строку лога: {}. По причине {}", sb, e.getMessage());
             }
 
             if (currentLine == null) {
