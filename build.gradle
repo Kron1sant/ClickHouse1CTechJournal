@@ -8,6 +8,7 @@ application {
 
 version = '1.0.3'
 compileJava.options.encoding = 'UTF-8'
+compileTestJava.options.encoding = 'UTF-8'
 
 repositories {
     mavenCentral()
@@ -18,4 +19,9 @@ dependencies {
     implementation group: 'ru.yandex.clickhouse', name: 'clickhouse-jdbc', version: '+'
     implementation group: 'org.slf4j', name: 'slf4j-simple', version: '1.7+'
     implementation group: 'commons-cli', name: 'commons-cli', version: '1.4'
+    implementation group: 'org.junit.jupiter', name: 'junit-jupiter', version:'5.7.0'
+}
+
+tasks.withType(Test) {
+    useJUnitPlatform()
 }

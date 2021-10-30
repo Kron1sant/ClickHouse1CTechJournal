@@ -38,12 +38,13 @@ public class AppConfig {
         setMonitoringIntervalSec(30);
     }
 
-    public static AppConfig getConfig() {
+    public static AppConfig getConfig(String pathToConfig) {
         AppConfig config;
-        String pathToConfig = System.getenv(PATH_TO_CONFIG.getKey());
+
         if (pathToConfig == null) {
-            pathToConfig = DEFAULT_PATH_TO_CONFIG;
+            pathToConfig = getPathToConfig();
         }
+
         try {
             config = AppConfig.readConfigFromFile(pathToConfig);
             logger.info("Используются настройки из файла {}", pathToConfig);
@@ -54,6 +55,14 @@ public class AppConfig {
         }
         config.redefineUsingEnvironmentValues();
         return config;
+    }
+
+    private static String getPathToConfig() {
+        String pathToConfig = System.getenv(PATH_TO_CONFIG.getKey());
+        if (pathToConfig == null) {
+            pathToConfig = DEFAULT_PATH_TO_CONFIG;
+        }
+        return pathToConfig;
     }
 
     public static AppConfig readConfigFromFile(String filename) throws AppConfigException {

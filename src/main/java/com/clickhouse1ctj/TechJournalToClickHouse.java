@@ -37,6 +37,7 @@ public class TechJournalToClickHouse implements Runnable {
     public static void main(String[] args) throws ParseException, IOException {
         Options options = new Options();
         options.addOption(new Option("d", "daemon", false, "Daemon mode"));
+        options.addOption(new Option("", "config", true, "Daemon mode"));
         options.addOption(new Option("h", "help", false, "Show help"));
 
         CommandLineParser parser = new DefaultParser();
@@ -47,7 +48,7 @@ public class TechJournalToClickHouse implements Runnable {
         }
 
         // Читаем настройки
-        appConfig = AppConfig.getConfig();
+        appConfig = AppConfig.getConfig(cmd.getOptionValue("config"));
         if (cmd.hasOption("d")) {
             // Устанавливаем признак службы (демона), только если явно передан ключ,
             // иначе используется настройка полученная при формировании конфига

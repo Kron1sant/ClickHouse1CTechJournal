@@ -1,0 +1,16 @@
+# ТЕСТОВЫЙ ФАЙЛ - только для проверки корректного парсинга настроек
+threadCount: 5
+batchSize: 50 # количество записей из файла в одной пакетной вставке (INSERT в таблицу)
+thresholdSizeHashByAttr: 50000 # Порог размера файла, когда его контрольная сумма будет считаться по атрибутам
+monitoringIntervalSec: 10 # Интервал поиска файлов для загрузки в режиме демона в секундах
+
+clickhouse:
+  host: test_host
+  port: 9876  # 8123 - http; 9000 - tcp
+  user: test_user
+  pass: test_pass
+  database: test_base
+  engine: test_engine # Log - Log не может добавлять колонки динамически
+  tablePostfix: test_postfix # будет добавлен к имени таблицы - лучше указывать имя кластера 1С
+  orderBy: test_order1, test_order2 # первичный ключ
+  partition: test_pert1, test_part2  # секционирование таблиц логов по часам и типу источника
