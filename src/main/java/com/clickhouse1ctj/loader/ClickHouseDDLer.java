@@ -1,7 +1,7 @@
 package com.clickhouse1ctj.loader;
 
 import com.clickhouse1ctj.config.AppConfig;
-import com.clickhouse1ctj.config.ClickHouseConnect;
+import com.clickhouse1ctj.config.ClickHouseConnectConfig;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +17,7 @@ import java.util.*;
 public class ClickHouseDDLer {
     private static final Logger logger = LoggerFactory.getLogger(ClickHouseDDLer.class);
     protected static final ClickHouseDDLer chDDLSync = new ClickHouseDDLer();
-    private static ClickHouseConnect chConfig;
+    private static ClickHouseConnectConfig chConfig;
 
     protected final Map<ClickHouseQueryParam, String> chAdditionalDBParams = new EnumMap<>(ClickHouseQueryParam.class);
     private ClickHouseDataSource dataSource;

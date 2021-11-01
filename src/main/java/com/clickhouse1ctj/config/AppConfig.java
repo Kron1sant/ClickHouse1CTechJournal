@@ -18,7 +18,7 @@ public class AppConfig {
     static final Logger logger = LoggerFactory.getLogger(AppConfig.class);
     private static final String DEFAULT_PATH_TO_CONFIG = "config.yaml";
 
-    public final ClickHouseConnect clickhouse;
+    public final ClickHouseConnectConfig clickhouse;
 
     private boolean daemonMode;
     private int threadCount;
@@ -27,9 +27,9 @@ public class AppConfig {
     private int thresholdSizeHashByAttr; // Порог размера файла, когда его контрольная сумма будет считаться по атрибутам
     private int monitoringIntervalSec; // Интервал поиска файлов для загрузки в режиме демона в секундах
 
-    AppConfig() {
+    public AppConfig() {
         // Задает настройки по умолчанию
-        clickhouse = new ClickHouseConnect();
+        clickhouse = new ClickHouseConnectConfig();
         setDaemonMode(false);
         setThreadCount(2);
         setBatchSize(10000);

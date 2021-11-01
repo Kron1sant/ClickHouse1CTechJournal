@@ -3,7 +3,7 @@ package com.clickhouse1ctj.loader;
 import com.clickhouse1ctj.parser.LogRecord;
 import com.clickhouse1ctj.parser.TechJournalParser;
 import com.clickhouse1ctj.config.AppConfig;
-import com.clickhouse1ctj.config.ClickHouseConnect;
+import com.clickhouse1ctj.config.ClickHouseConnectConfig;
 import com.clickhouse1ctj.parser.TechJournalParserException;
 
 import ru.yandex.clickhouse.*;
@@ -19,7 +19,7 @@ public class ClickHouseInserter implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(ClickHouseInserter.class);
 
     // Параметры подключения к Clickhouse
-    private final ClickHouseConnect chConfig;
+    private final ClickHouseConnectConfig chConfig;
     private final Queue<Path> logsPool;
     private final int batchSize;
     private final ClickHouseDataSource dataSource;

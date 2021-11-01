@@ -1,6 +1,6 @@
 package com.clickhouse1ctj.config;
 
-public class ClickHouseConnect {
+public class ClickHouseConnectConfig {
     private String host;
     private String port;
     private String user;
@@ -11,7 +11,7 @@ public class ClickHouseConnect {
     private String orderBy;
     private String partition;
 
-    ClickHouseConnect() {
+    ClickHouseConnectConfig() {
         // Настройки по умолчанию
         setHost("localhost");
         setPort("8123"); // 8123 - http; 9000 - tcp

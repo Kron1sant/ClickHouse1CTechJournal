@@ -1,0 +1,61 @@
+20:18.919000-0,PROC,0,process=rphost,OSThread=12324,Txt=Process terminated. Stop signal received (ragent)
+20:18.919001-0,PROC,0,process=rphost,OSThread=2624,Txt=Process terminated. Stop signal received (ragent)
+20:19.029001-1,SCALL,2,process=rphost,OSThread=11000,ClientID=1375,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=19,CallID=94563,MName=removeWorkProcess,DstClientID=2744
+20:19.029003-1,SCALL,2,process=rphost,OSThread=11000,ClientID=1371,Interface=7931ae5c-5df1-463c-a53a-8e62bf74d068,IName=IExtNotify,Method=1,CallID=94564,MName=onFinishRpHost,DstClientID=2733
+20:19.029004-0,EXCP,2,process=rphost,OSThread=11000,Exception=96380a22-60f7-4a8b-8fca-1224e6bc518f,Descr='src\RMngrCalls.cpp(981):
+96380a22-60f7-4a8b-8fca-1224e6bc518f: OnFinishRpHost'
+20:19.029006-13803458889,SCOM,1,process=rphost,OSThread=11000,ProcessName=RHostRoot,SrcProcessName=RHostRoot
+20:19.857000-0,EXCP,1,process=rphost,OSThread=11000,Exception=dd149677-3d47-4e05-a55f-4e75b13a441f,Descr='src\RemoteInterfaceImpl.cpp(756):
+dd149677-3d47-4e05-a55f-4e75b13a441f: Процесс завершается. Исходящий вызов запрещен.'
+20:19.857001-0,EXCP,1,process=rphost,OSThread=11000,Exception=dd149677-3d47-4e05-a55f-4e75b13a441f,Descr='src\RemoteInterfaceImpl.cpp(756):
+dd149677-3d47-4e05-a55f-4e75b13a441f: Процесс завершается. Исходящий вызов запрещен.'
+20:19.866005-0,VRSREQUEST,2,process=rphost,p:processName=buh_test,OSThread=13928,t:clientID=1110,t:applicationName=1CV8C,t:computerName=user-comp,t:connectID=8113,Method=POST,URI='/e1cib/modules/call?id=urn%3Amodule%3Amd%3Aec6ed9cb-85a2-4303-9906-cfb4ce6500bf%40property%3D%27d5963243-262e-4398-b4d7-fb16d06484f6%27%3Bversion%3D%27ea5ff90074a2b44ba561b5ca503633f800000000%27',Headers='1C-BaseLocation: e1c://server/srv1c/buh_test
+Content-Length: 278
+1C-ApplicationName: 1CV8C
+Content-Type: application/xml; charset=utf-8
+Accept-Language: ru-RU
+1C-SDCVersion: 00000000-0000-0000-0000-000000000000
+1C-ConnectString: Srvr="srv1c";Ref="buh_test"
+Accept-Encoding: 1CSDC,deflate;q=0.5
+Accept: application/xml
+vrs-session: 43441790-97ad-4004-ba12-9e612f77fa0c
+Pragma: sync=328
+Content-Encoding: deflate',Body=278
+20:19.957001-3,DBMSSQL,5,process=rphost,p:processName=buh_test,OSThread=9952,t:clientID=2734,t:applicationName=BackgroundJob,t:computerName=srv1c,t:connectID=10690,SessionID=637,Usr=User,DBMS=DBMSSQL,DataBase=srv1c\buh_test,Trans=1,dbpid=108,Sql='SELECT
+T1._IDRRef,
+T1._Code
+FROM dbo._Acc11 T1
+WHERE ((T1._Fld14598 = ?)) AND (T1._IDRRef = ?)
+p_0: 0N
+p_1: 0x10BF8BA9C77FDAED4C8B400ADC26680E
+',Rows=1,RowsAffected=-1,Context='
+ОбщийМодуль.ДлительныеОперации.Модуль : 1114 : ВызватьПроцедуру(ВсеПараметры.ИмяПроцедуры, ВсеПараметры.ПараметрыПроцедуры);
+	ОбщийМодуль.ДлительныеОперации.Модуль : 1124 : ОбщегоНазначения.ВыполнитьМетодКонфигурации(ИмяПроцедуры, ПараметрыВызова);
+		ОбщийМодуль.ОбщегоНазначения.Модуль : 5261 : Выполнить ИмяМетода + "(" + ПараметрыСтрока + ")";
+			 : 1 : Обработки.ГрупповоеПерепроведениеДокументов.ПерепроведениеДокументов(Параметры[0],Параметры[1])
+				Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 116 : РезультатОбработки = ВыполнитьПерепроведение(Параметры);
+					Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 423 : Успешно = ПровестиПервичныйДокумент(ВыборкаПоДокументам, СтрокаОрганизации, ТаблицаСообщений, РегистрыТребующиеОчисткиПоДокументам);
+						Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 2010 : ДокументОбъект.Записать(РежимЗаписиДокумента.Проведение, РежимПроведенияДокумента.Неоперативный);
+							Документ.РеализацияТоваровУслуг.МодульОбъекта : 1076 : УчетНДС.СформироватьДвиженияОтгрузкаБезПереходаПраваСобственности(
+								ОбщийМодуль.УчетНДС.Модуль : 748 : СформироватьДвиженияРеализацияТоваровУслуг(
+									ОбщийМодуль.УчетНДС.Модуль : 101 : СформироватьПроводкиРеализацияТоваровУслуг(Параметры.РеализованныеТоварыУслуги, Реквизиты, Движения, Отказ);
+										ОбщийМодуль.УчетНДС.Модуль : 9267 : БухгалтерскийУчет.УстановитьСубконто(Проводка.СчетДт, Проводка.СубконтоДт,
+											ОбщийМодуль.БухгалтерскийУчет.Модуль : 0'
+20:19.957005-5,SDBL,4,process=rphost,p:processName=buh_test,OSThread=9952,t:clientID=2734,t:applicationName=BackgroundJob,t:computerName=srv1c,t:connectID=10690,SessionID=637,Usr=User,DBMS=DBMSSQL,DataBase=srv1C\buh_test,Trans=1,Sdbl='SELECT ALLOWED ID,Code FROM Acc11 WHERE ID=11:10bf8ba9c77fdaed4c8b400adc26680e',Rows=1,Context='
+ОбщийМодуль.ДлительныеОперации.Модуль : 1114 : ВызватьПроцедуру(ВсеПараметры.ИмяПроцедуры, ВсеПараметры.ПараметрыПроцедуры);
+	ОбщийМодуль.ДлительныеОперации.Модуль : 1124 : ОбщегоНазначения.ВыполнитьМетодКонфигурации(ИмяПроцедуры, ПараметрыВызова);
+		ОбщийМодуль.ОбщегоНазначения.Модуль : 5261 : Выполнить ИмяМетода + "(" + ПараметрыСтрока + ")";
+			 : 1 : Обработки.ГрупповоеПерепроведениеДокументов.ПерепроведениеДокументов(Параметры[0],Параметры[1])
+				Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 116 : РезультатОбработки = ВыполнитьПерепроведение(Параметры);
+					Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 423 : Успешно = ПровестиПервичныйДокумент(ВыборкаПоДокументам, СтрокаОрганизации, ТаблицаСообщений, РегистрыТребующиеОчисткиПоДокументам);
+						Обработка.ГрупповоеПерепроведениеДокументов.МодульМенеджера : 2010 : ДокументОбъект.Записать(РежимЗаписиДокумента.Проведение, РежимПроведенияДокумента.Неоперативный);
+							Документ.РеализацияТоваровУслуг.МодульОбъекта : 1076 : УчетНДС.СформироватьДвиженияОтгрузкаБезПереходаПраваСобственности(
+								ОбщийМодуль.УчетНДС.Модуль : 748 : СформироватьДвиженияРеализацияТоваровУслуг(
+									ОбщийМодуль.УчетНДС.Модуль : 101 : СформироватьПроводкиРеализацияТоваровУслуг(Параметры.РеализованныеТоварыУслуги, Реквизиты, Движения, Отказ);
+										ОбщийМодуль.УчетНДС.Модуль : 9267 : БухгалтерскийУчет.УстановитьСубконто(Проводка.СчетДт, Проводка.СубконтоДт,
+											ОбщийМодуль.БухгалтерскийУчет.Модуль : 0'
+20:19.957002-0,CONN,1,process=rphost,OSThread=11000,Txt='Connection removed from ping direction: address=[fe80::cca1:d032:cdff:fd5d%13]:1541,pingTimeout=5000,pingPeriod=1000,lastSentTs=3122575616,lastReceivedTs=3122574600,lastReceivedTestTs=(3122571553,3122572569,3122572569,3122573585,3122573585,3122574600,3122574600,3122575616),clientID=1359'
+20:19.957003-223758969,CONN,0,process=rphost,OSThread=9872,ClientID=1359,Txt=Outgoing connection closed
+20:19.957004-0,EXCP,1,process=rphost,OSThread=11000,Exception=dd149677-3d47-4e05-a55f-4e75b13a441f,Descr='src\RemoteInterfaceImpl.cpp(756):
+dd149677-3d47-4e05-a55f-4e75b13a441f: Процесс завершается. Исходящий вызов запрещен.'
+20:19.957051-0,PROC,1,process=rphost,OSThread=11000,Err=0,Txt=1C:Enterprise 8.3 (x86-64) (8.3.18.1661) Working Process (debug by http) finished.

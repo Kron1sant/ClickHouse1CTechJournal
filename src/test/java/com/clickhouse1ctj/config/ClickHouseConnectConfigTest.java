@@ -5,12 +5,12 @@ import org.junit.jupiter.api.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class ClickHouseConnectTest {
-    static ClickHouseConnect testCHConfigGetter = AppConfig.getConfig(AppConfigTest.TEST_CONFIG_PATH).clickhouse;
-    static ClickHouseConnect testCHConfigSetter = AppConfig.getConfig(AppConfigTest.TEST_CONFIG_PATH).clickhouse;
+class ClickHouseConnectConfigTest {
+    static final ClickHouseConnectConfig testCHConfigGetter = AppConfig.getConfig(AppConfigTest.TEST_CONFIG_PATH).clickhouse;
+    static final ClickHouseConnectConfig testCHConfigSetter = AppConfig.getConfig(AppConfigTest.TEST_CONFIG_PATH).clickhouse;
 
     @Nested
-    class ClickHouseConnectTestGetter {
+    class ClickHouseConnectConfigTestGetter {
         @Test
         void getHost() {
             assertEquals("test_host", testCHConfigGetter.getHost());
@@ -59,7 +59,7 @@ class ClickHouseConnectTest {
     }
 
     @Nested
-    class ClickHouseConnectTestSetter {
+    class ClickHouseConnectConfigTestSetter {
         @Test
         void setHost() {
             testCHConfigSetter.setHost("test_host2");

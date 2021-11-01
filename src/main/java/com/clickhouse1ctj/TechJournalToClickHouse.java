@@ -70,6 +70,26 @@ public class TechJournalToClickHouse implements Runnable {
         }
     }
 
+    static Path[] getPaths(String[] args) throws IOException {
+        Path[] paths = new Path[args.length == 0 ? 1 : args.length];
+        if (args.length == 0)
+            paths[0] = getPath("");
+        else
+            for (int i = 0; i < args.length; i++)
+                paths[i] = getPath(args[i]);
+
+        return paths;
+    }
+
+    private static Path getPath(String pathStr) throws IOException {
+        Path path = Path.of(pathStr);
+
+        if (!Files.exists(path)) {
+            throw new IOException(String.format("Путь к логам не существует: %s", path.toAbsolutePath()));
+        }
+        return path;
+    }
+
     @Override
     public void run() {
         LocalDateTime startTime = LocalDateTime.now();
@@ -87,6 +107,19 @@ public class TechJournalToClickHouse implements Runnable {
         }
 
         // Ищем файлы с логами
+        if (!findAndPoolingLogFiles()) {
+            logger.info("Загрузка отменена: нет файлов для загрузки");
+            return;
+        }
+
+        // Запускаем указанное в параметрах число потоков по загрузке логов
+        List<ClickHouseInserter> loaders = startLoadersExecution();
+
+        // Вывод статистики
+        showStatistics(startTime, loaders);
+    }
+
+    private static boolean findAndPoolingLogFiles() {
         for (Path pathsToLog : pathsToLogs) {
             logger.info("Инициирована загрузка технологического журнала по адресу {}",
                     pathsToLog.toAbsolutePath());
@@ -97,64 +130,7 @@ public class TechJournalToClickHouse implements Runnable {
                 e.printStackTrace();
             }
         }
-        if (logsPool.isEmpty()) {
-            logger.info("Загрузка отменена: нет файлов для загрузки");
-            return;
-        }
-
-        // Запускаем указанное в параметрах число потоков по загрузке логов
-        int threadsCount = Integer.min(appConfig.getThreadCount(), logsPool.size());
-        logger.info("Загрузка будет выполнена {} потоками", threadsCount);
-        ExecutorService executor = Executors.newFixedThreadPool(threadsCount);
-        List<ClickHouseInserter> loaders = new ArrayList<>();
-        for (int i = 0; i < threadsCount; i++) {
-            ClickHouseInserter loadThread = new ClickHouseInserter(appConfig, logsPool);
-            executor.execute(loadThread);
-            loaders.add(loadThread);
-        }
-        // Ждем завершения всех потоков по загрузке
-        executor.shutdown();
-        try {
-            if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS))
-                logger.warn("Потоки были завершены по таймауту!");
-        } catch (InterruptedException e) {
-            logger.error("Ошибка при ожидании завершения потоков: {}", e.getMessage());
-            e.printStackTrace();
-            Thread.currentThread().interrupt();
-        } finally {
-            // Закроем общее соединение для операций DDl
-            ClickHouseDDLer.close();
-        }
-
-        // Подсчет статистики
-        int totalFiles = 0;
-        int totalRecords = 0;
-        for (ClickHouseInserter loader: loaders) {
-            totalFiles += loader.getProcessedFiles();
-            totalRecords += loader.getProcessedRecords();
-        }
-        Duration duration = Duration.between(startTime, LocalDateTime.now());
-        logger.info("Загрузка завершена за {}. Всего из {} непустых файлов загружено {} записей", duration, totalFiles, totalRecords);
-    }
-
-    private static Path getPath(String pathStr) throws IOException {
-        Path path = Path.of(pathStr);
-
-        if (!Files.exists(path)) {
-            throw new IOException(String.format("Путь к логам не существует: %s", path.toAbsolutePath()));
-        }
-        return path;
-    }
-
-    private static Path[] getPaths(String[] args) throws IOException {
-        Path[] paths = new Path[args.length == 0 ? 1 : args.length];
-        if (args.length == 0)
-            paths[0] = getPath("");
-        else
-            for (int i = 0; i < args.length; i++)
-                paths[i] = getPath(args[i]);
-
-        return paths;
+        return !logsPool.isEmpty();
     }
 
     private static void fillLogsPool(Path pathToLogs) throws IOException {
@@ -243,6 +219,43 @@ public class TechJournalToClickHouse implements Runnable {
             md.update(buffer.array());
         }
         return md.digest();
+    }
+
+    private static List<ClickHouseInserter> startLoadersExecution() {
+        int threadsCount = Integer.min(appConfig.getThreadCount(), logsPool.size());
+        logger.info("Загрузка будет выполнена {} потоками", threadsCount);
+        ExecutorService executor = Executors.newFixedThreadPool(threadsCount);
+        List<ClickHouseInserter> loaders = new ArrayList<>();
+        for (int i = 0; i < threadsCount; i++) {
+            ClickHouseInserter loadThread = new ClickHouseInserter(appConfig, logsPool);
+            executor.execute(loadThread);
+            loaders.add(loadThread);
+        }
+        // Ждем завершения всех потоков по загрузке
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS))
+                logger.warn("Потоки были завершены по таймауту!");
+        } catch (InterruptedException e) {
+            logger.error("Ошибка при ожидании завершения потоков: {}", e.getMessage());
+            e.printStackTrace();
+            Thread.currentThread().interrupt();
+        } finally {
+            // Закроем общее соединение для операций DDl
+            ClickHouseDDLer.close();
+        }
+        return loaders;
+    }
+
+    private static void showStatistics(LocalDateTime startTime, List<ClickHouseInserter> loaders) {
+        int totalFiles = 0;
+        int totalRecords = 0;
+        for (ClickHouseInserter loader: loaders) {
+            totalFiles += loader.getProcessedFiles();
+            totalRecords += loader.getProcessedRecords();
+        }
+        Duration duration = Duration.between(startTime, LocalDateTime.now());
+        logger.info("Загрузка завершена за {}. Всего из {} непустых файлов загружено {} записей", duration, totalFiles, totalRecords);
     }
 
     private static void showHelp(Options options) {

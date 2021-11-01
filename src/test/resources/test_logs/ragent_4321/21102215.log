@@ -1,0 +1,25 @@
+﻿00:00.447001-1,SCALL,0,process=ragent,OSThread=11712,ClientID=183,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=32,CallID=56167,MName=getProcessesSetVersion,DstClientID=350
+00:00.447003-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=28,CallID=56168,MName=getRegistryVersion,DstClientID=349
+00:00.447005-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=81,CallID=56169,MName=getServiceDistribVersion,DstClientID=349
+00:00.447007-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=28,CallID=56170,MName=getRegistryVersion,DstClientID=349
+00:00.494001-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=3,CallID=56171,MName=getToDelete,DstClientID=349
+00:00.494003-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=29,CallID=56172,MName=getClusterManagerList,DstClientID=349
+00:00.494005-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=51,CallID=56173,MName=refreshProcesses,DstClientID=349
+00:00.494007-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=9,CallID=56174,MName=getSrvrProcessParamsList,DstClientID=349
+00:00.494009-1,SCALL,0,process=ragent,OSThread=10468,ClientID=183,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=0,CallID=56175,MName=getRegistryParams,DstClientID=350
+00:00.494011-1,SCALL,0,process=ragent,OSThread=10468,ClientID=183,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=9,CallID=56176,MName=getAllManagers,DstClientID=350
+00:00.494013-1,SCALL,0,process=ragent,OSThread=10468,ClientID=183,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=18,CallID=56177,MName=getAllWorkProcesses,DstClientID=350
+00:00.494015-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=18,CallID=56178,MName=getServersList,DstClientID=349
+00:00.494017-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=18,CallID=56179,MName=getServersList,DstClientID=349
+00:00.697001-1,SCALL,0,process=ragent,OSThread=10468,ClientID=182,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=27,CallID=56180,MName=syncLaunchedProcesses,DstClientID=349
+00:00.744000-0,CONN,0,process=ragent,OSThread=13856,Txt='Ping direction statistics: address=[fe80::cca1:d032:cdff:fd5d%13]:2540,pingTimeout=5000,pingPeriod=1000,period=10156,packetsSent=10,avgResponseTime=0,maxResponseTime=0,packetsTimedOut=0,packetsLost=0,packetsLostAndFound=0'
+00:00.744001-0,CONN,0,process=ragent,OSThread=13856,Txt='Ping direction statistics: address=[fe80::cca1:d032:cdff:fd5d%13]:2541,pingTimeout=5000,pingPeriod=1000,period=10156,packetsSent=10,avgResponseTime=0,maxResponseTime=0,packetsTimedOut=0,packetsLost=1,packetsLostAndFound=1'
+00:01.447001-1,SCALL,0,process=ragent,OSThread=11712,ClientID=183,Interface=64016dc5-c439-49fa-8a71-c3cb708e243b,IName=IClusterState,Method=32,CallID=56181,MName=getProcessesSetVersion,DstClientID=350
+00:01.447003-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=28,CallID=56182,MName=getRegistryVersion,DstClientID=349
+00:01.447005-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=81,CallID=56183,MName=getServiceDistribVersion,DstClientID=349
+00:01.447007-1,SCALL,0,process=ragent,OSThread=11712,ClientID=182,Interface=0459eaa0-589f-4a6d-9eed-c1a7461c8e3f,IName=IClusterRegistry,Method=28,CallID=56184,MName=getRegistryVersion,DstClientID=349
+00:01.697001-1,SCALL,0,process=ragent,OSThread=12484,ClientID=173,CallID=56185,MName=Release,DstClientID=328
+00:01.697003-1,SCALL,0,process=ragent,OSThread=12484,ClientID=173,CallID=56186,MName=Release,DstClientID=328
+00:01.697005-1,SCALL,0,process=ragent,OSThread=12484,ClientID=173,CallID=56187,MName=Release,DstClientID=328
+00:01.697006-0,CONN,0,process=ragent,OSThread=12484,Txt='Connection removed from ping direction: address=[fe80::cca1:d032:cdff:fd5d%13]:2541,pingTimeout=5000,pingPeriod=1000,lastSentTs=3124956288,lastReceivedTs=3124956288,lastReceivedTestTs=(3124955273,3124955304,3124955304,3124956288,3124956288,3124956288,3124956320,3124956320),clientID=173'
+00:01.697007-130208004,CONN,0,process=ragent,OSThread=12956,ClientID=173,Txt=Outgoing connection closed
