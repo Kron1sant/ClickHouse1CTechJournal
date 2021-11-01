@@ -37,7 +37,7 @@ public class TechJournalToClickHouse implements Runnable {
     public static void main(String[] args) throws ParseException, IOException {
         Options options = new Options();
         options.addOption(new Option("d", "daemon", false, "Daemon mode"));
-        options.addOption(new Option("", "config", true, "Daemon mode"));
+        options.addOption(new Option("", "config", true, "Config file (*.yaml)"));
         options.addOption(new Option("h", "help", false, "Show help"));
 
         CommandLineParser parser = new DefaultParser();

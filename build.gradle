@@ -6,7 +6,7 @@ application {
     mainClass = 'com.clickhouse1ctj.TechJournalToClickHouse'
 }
 
-version = '1.0.3'
+version = '1.0.4'
 compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 
