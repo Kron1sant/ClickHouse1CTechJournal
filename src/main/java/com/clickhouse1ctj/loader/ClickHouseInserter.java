@@ -198,17 +198,16 @@ public class ClickHouseInserter implements Runnable {
                 case "source_pid":
                     stmt.setInt(i, parser.parentPid);
                     break;
+                case "path_to_file":
+                    stmt.setString(i, parser.pathToLog.toString());
+                    break;
                 case "source":
                     stmt.setString(i, parser.source);
                     break;
                 case "datetime":
                     // There is a mistake in ClickHouse-JDBC driver in class ClickHouseValueFormatter:
                     // nano-part concatenates to a parameter value without leading zeros.
-                    // This code:
-                    // if (time != null && time.getNanos() % 1000000 > 0) {
-                    //        formatted.append('.').append(time.getNanos()); ←---- !!!
-                    //     }
-                    // stmt.setTimestamp(i, Timestamp.valueOf(rec.timestamp));
+                    // Thus, we're using setString.
                     stmt.setString(i, rec.getDateTime64CH());
                     break;
                 case "line_number":

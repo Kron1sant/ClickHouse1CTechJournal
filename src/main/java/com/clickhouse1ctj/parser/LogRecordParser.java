@@ -2,12 +2,17 @@ package com.clickhouse1ctj.parser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Pattern;
 
 class LogRecordParser {
     static final Logger logger = LoggerFactory.getLogger(LogRecordParser.class);
+    static final ConcurrentMap<String, String> cacheNormalizedProperties = new ConcurrentHashMap<>();
+    static final Pattern propertyKeyFormat = Pattern.compile("^[a-zA-Z_][0-9a-zA-Z_]*$");
     private final String rawRecord;
     private final int rowLength;
     private final SortedMap<String, String> logDict = new TreeMap<>();
@@ -93,11 +98,27 @@ class LogRecordParser {
             // Битая строка
             logger.info("Неожиданный конец строки лога {}", rawRecord);
             return null;
-        } else {
-            String key = rawRecord.substring(pos1 + 1, pos2).replace(":", "");
-            pos1 = pos2 + 1;
-            return key;
         }
+
+        // Чтобы каждый раз не нормализовывать имена свойств, будем их кэшировать.
+        String key = cacheNormalizedProperties.computeIfAbsent(
+                rawRecord.substring(pos1 + 1, pos2), this::normalizePropertyKey);
+        pos1 = pos2 + 1;
+        return key;
+    }
+
+    /**
+     * Некоторые свойства могут иметь следующий формат: ProcessList[pid, mem(Kb)] или p:processName
+     * Такие поля не соответствуют требованиям к идентификаторам в ClickHouse - ^[a-zA-Z_][0-9a-zA-Z_]*$
+     * Возможны варианты: удалить недопустимые символы, или использовать кавычки
+     * (ClickHouse допускает двойные или обратные).
+     */
+    private String normalizePropertyKey(String key) {
+        // Используем кавычки:
+        if (!propertyKeyFormat.matcher(key).find())
+            return "\"" + key + "\"";
+        else
+            return key;
     }
 
     private String getValueInParsingRow() {

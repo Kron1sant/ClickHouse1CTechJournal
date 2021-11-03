@@ -11,7 +11,6 @@ import ru.yandex.clickhouse.settings.ClickHouseProperties;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.security.cert.TrustAnchor;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -62,7 +61,7 @@ class TechJournalToClickHouseTest {
 
         // Число записей "Событие-Свойство"
         String eventPropsTablename = TEST_DATABASE_NAME + ".properties_by_events_tj";
-        int testCountOfRecordsInEventProps = 140;
+        int testCountOfRecordsInEventProps = 148;
         assertEquals(testCountOfRecordsInEventProps, getCountOfRecords(eventPropsTablename));
 
         // Конкретные параметры эталонного события из ТЖ
@@ -155,7 +154,7 @@ class TechJournalToClickHouseTest {
         ClickHouseDataSource tmpDataSource = new ClickHouseDataSource(url);
         try (ClickHouseConnection conn = tmpDataSource.getConnection(testConfig.clickhouse.getUser(), testConfig.clickhouse.getPass());
              ClickHouseStatement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             ResultSet ignore = stmt.executeQuery(sql)) {
             // pass
         } catch (SQLException e) {
             throw new SQLException(String.format("Не удалось удалить тестовую базу данных %s", TEST_DATABASE_NAME));

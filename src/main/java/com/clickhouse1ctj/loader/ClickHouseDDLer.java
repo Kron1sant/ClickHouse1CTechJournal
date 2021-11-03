@@ -250,6 +250,7 @@ public class ClickHouseDDLer {
         defaultColumns.put("parent", "String");
         defaultColumns.put("source", "String");
         defaultColumns.put("source_pid", "UInt32");
+        defaultColumns.put("path_to_file", "String");
         defaultColumns.put("line_number", "UInt32");
         defaultColumns.put("datetime", "DateTime(6)");
         defaultColumns.put("duration", "UInt64");
@@ -258,17 +259,5 @@ public class ClickHouseDDLer {
         return defaultColumns;
     }
 
-    public boolean checkTableColumns(String tablename, Set<String> setFields) throws SQLException {
-        // TEST.
-        SortedMap<String, String> existingColumns = getTableDescription(tablename);
-        Set<String> copyFields = new TreeSet<>(setFields);
-        copyFields.removeAll(existingColumns.keySet());
-        if (copyFields.isEmpty()) {
-            return true;
-        } else {
-            logger.error("В таблице отсутствуют колонки {} ", copyFields);
-            return false;
-        }
-    }
 }
 
